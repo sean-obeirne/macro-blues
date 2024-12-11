@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include "nrf.h"          // Core header for accessing nRF52 hardware
 #include "nrf_gpio.h"     // GPIO functions
-// #include "nrf_delay.h"    // For adding delays (useful for testing)
+#include "nrf_delay.h"    // For adding delays (useful for testing)
 
 #define LED_PIN 17        // Pin connected to LED1 (adjust based on your hardware setup)
 
@@ -18,7 +18,12 @@ int main(void) {
     // Turn on the LED by setting the pin high
     nrf_gpio_pin_set(LED_PIN);
 
+	int cycle_num = 0;
+
     while (true) {
+
+		nrf_gpio_pin_clear(LED_PIN);
+		nrf_delay_ms(1000)
         // Keep the LED on indefinitely
         // Optionally add a toggle or delay here for blinking behavior
     }
