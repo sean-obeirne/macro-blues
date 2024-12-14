@@ -4,7 +4,7 @@
 
 void led_init(uint32_t pin);
 int led_main(void);
-void turn_on_led(void);
-void turn_off_led(void);
+void led_on(uint32_t pin);
+void led_off(uint32_t pin);
 
 #endif
