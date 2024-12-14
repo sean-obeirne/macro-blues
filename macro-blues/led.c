@@ -1,32 +1,34 @@
 #include <stdint.h>
 #include <stdbool.h>
-#include "nrf.h"          // Core header for accessing nRF52 hardware
-#include "nrf_gpio.h"     // GPIO functions
-#include "nrf_delay.h"    // For adding delays (useful for testing)
+#include "led.h"
+#include "pins.h"
 
-#define LED_PIN 17        // Pin connected to LED1 (adjust based on your hardware setup)
+#define GPIO_BASE_ADDRESS 0x50000000
+#define GPIO_OUTSET (*(volatile uint32_t *) (GPIO_BASE_ADDRESS + 0x508))
+#define GPIO_OUTCLR (*(volatile uint32_t *) (GPIO_BASE_ADDRESS + 0x50C))
+#define GPIO_DIRSET (*(volatile uint32_t *) (GPIO_BASE_ADDRESS + 0x518))
+#define GPIO_DIRCLR (*(volatile uint32_t *) (GPIO_BASE_ADDRESS + 0x51C))
 
-void led_init(void) {
+#define GPIO_PIN_CNF(n) (*(volatile uint32_t*) ((uintptr_t)GPIO_BASE_ADDRESS + 0x700 + (n * 4)))
+#define DIR_OFFSET 0
+#define INPUT_OFFSET 1
+#define PULL_OFFSET 2
+#define DRIVE_OFFSET 8
+#define SENSE_OFFSET 16
+
+void led_init(uint32_t pin) {
     // Configure the LED pin as an output
-    nrf_gpio_cfg_output(LED_PIN);
+	GPIO_PIN_CNF(pin) =	(1 << DIR_OFFSET)
+					  | (1 << INPUT_OFFSET)
+					  | (0 << PULL_OFFSET)
+					  | (0 << DRIVE_OFFSET)
+					  | (0 << SENSE_OFFSET);
+	GPIO_DIRSET = (1 << pin);
+	GPIO_OUTSET = (1 << pin);
 }
 
-int main(void) {
-    // Initialize the GPIO subsystem
-    led_init();
-
-    // Turn on the LED by setting the pin high
-    nrf_gpio_pin_set(LED_PIN);
-
-	int cycle_num = 0;
-
-    while (true) {
-
-		nrf_gpio_pin_clear(LED_PIN);
-		nrf_delay_ms(1000)
-        // Keep the LED on indefinitely
-        // Optionally add a toggle or delay here for blinking behavior
-    }
-
-    return 0; // Not typically reached in embedded systems
+int led_main(void) {
+	led_init(BLUE_LED);
+	led_init(RED_LED);
+	while(true){}
 }
