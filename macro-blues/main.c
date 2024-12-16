@@ -5,7 +5,7 @@
 
 
 int main() {
-	led_main();
+	led_init();
 	clock_main();
 	rtc_main();
 

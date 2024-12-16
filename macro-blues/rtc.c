@@ -44,7 +44,3 @@ int wait_ms(int milliseconds) {
 	return 0;
 }
 
-int rtc_main(void) {
-	rtc_init();
-	return 0;
-}
