@@ -11,6 +11,7 @@
 #define GPIO_OUTSET	(*(volatile uint32_t *) (GPIO_BASE_ADDRESS + 0x508))
 #define GPIO_OUTCLR	(*(volatile uint32_t *) (GPIO_BASE_ADDRESS + 0x50C))
 #define GPIO_IN		(*(volatile uint32_t *) (GPIO_BASE_ADDRESS + 0x510))
+#define GPIO_DIR	(*(volatile uint32_t *) (GPIO_BASE_ADDRESS + 0x514))
 #define GPIO_DIRSET	(*(volatile uint32_t *) (GPIO_BASE_ADDRESS + 0x518))
 #define GPIO_DIRCLR	(*(volatile uint32_t *) (GPIO_BASE_ADDRESS + 0x51C))
 
@@ -25,6 +26,9 @@
 // Useful macros for GPIO configuration
 #define GPIO_DIR_OUTPUT 1
 #define GPIO_DIR_INPUT 0
+
+void out_pin_init(uint32_t pin);
+void in_pin_init(uint32_t pin);
 
 #endif
 

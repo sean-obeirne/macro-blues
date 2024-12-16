@@ -3,7 +3,11 @@
 
 #define DEBUG
 
-void processing_led(void);
+void processing(void);
+void finish(void);
+void success(void);
+void clear(void);
+void fail(void);
 
 
 #endif

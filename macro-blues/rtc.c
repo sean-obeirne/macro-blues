@@ -13,19 +13,13 @@ void rtc_init(void) {
 
 
 int wait(int seconds) {
-	for(int ticks = 0; ticks < S_TO_MS(seconds); ticks++){
-		while (!EVENTS_TICK);
-		EVENTS_TICK = 0x0;
-
+	int ms = S_TO_MS(seconds);
+	int ret = wait_ms(ms);
 #ifdef DEBUG
-		if (ticks % S_TO_MS(1) == 0) 
-			toggle_led(RED);
+	ret = wait_ms(100);
+	led_off(BLUE);
 #endif
-	}
-#ifdef DEBUG
-	led_on(BLUE);
-#endif
-	return 0;
+	return ret;
 }
 
 int wait_ms(int milliseconds) {
@@ -34,8 +28,9 @@ int wait_ms(int milliseconds) {
 		EVENTS_TICK = 0x0;
 
 #ifdef DEBUG
-		if (ticks % S_TO_MS(1) == 0) 
+		if (ticks % (S_TO_MS(1) / 2) == 0) { // every half-second
 			toggle_led(RED);
+		}
 #endif
 	}
 #ifdef DEBUG
