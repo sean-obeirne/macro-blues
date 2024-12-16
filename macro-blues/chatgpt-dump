@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# author:	Sean O'Beirne
+# file:		chatgpt-dump
+
+# usage: chatgpt-dump 
+
+# 
+
+################################################################################
+
+echo "" > ./file-dump
+
+# Iterate over all .c and .h files in the current directory
+for file in *.c *.h; do
+    # Check if the file exists (in case no files match the pattern)
+    if [ -e "$file" ]; then
+        echo "<<<START OF FILE: $file>>>" >> ./file-dump
+        cat "$file" >> ./file-dump
+        echo "<<<END OF FILE: $file>>>" >> ./file-dump
+        echo >> ./file-dump
+    fi
+done
