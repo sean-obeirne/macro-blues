@@ -1,4 +1,5 @@
 #include "clock.h"
+#include "led.h"
 
 void clock_init(void) {
 	LFCLKSRC = 0x00000000;			// use RC oscillator
@@ -9,5 +10,6 @@ void clock_init(void) {
 
 int clock_main(void) {
 	clock_init();
+	// led_on(RED);
 	return 0;
 }

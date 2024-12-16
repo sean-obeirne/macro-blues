@@ -18,15 +18,23 @@ void led_on(uint32_t pin){
 	GPIO_OUTSET = (1 << pin);
 }
 void led_off(uint32_t pin){
-	GPIO_OUTSET = (0 << pin);
+	GPIO_OUTCLR = (1 << pin);
+}
+
+int is_led_on(uint32_t pin){
+	return (GPIO_OUT & (1 << pin)) != 0; // is pin high?
+}
+
+void toggle_led(uint32_t pin){
+	if (is_led_on(pin))
+		led_off(pin);
+	else
+		led_on(pin);
 }
 
 int led_main(void) {
 	led_init(BLUE_LED);
 	led_init(RED_LED);
-
-	led_on(RED_LED);
-	led_on(BLUE_LED);
 
 	return 0;
 }

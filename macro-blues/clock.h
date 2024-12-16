@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-// Base address for GPIO
+// Base address for clock
 #define CLOCK_BASE_ADDRESS 0x40000000
 
 // We will be using the LFCLK to save power
@@ -16,11 +16,11 @@
 
 #define EVENTS_LFCLKSTARTED (*(volatile uint32_t *) (CLOCK_BASE_ADDRESS + 0x104))	// clock has been started!
 
-#define INTENSET	(*(volatile uint32_t *) (CLOCK_BASE_ADDRESS + 0x304))	// enable interrupts
-#define INTENCLR	(*(volatile uint32_t *) (CLOCK_BASE_ADDRESS + 0x308))	// disable interrupts
-#define LFCLKRUN	(*(volatile uint32_t *) (CLOCK_BASE_ADDRESS + 0x408))	// status on if START has been triggered
-#define LFCLKSTAT	(*(volatile uint32_t *) (CLOCK_BASE_ADDRESS + 0x418))	// status of LFCLK
-#define LFCLKSRC	(*(volatile uint32_t *) (CLOCK_BASE_ADDRESS + 0x518))	// configure source of LFCLK
+#define CLOCK_INTENSET	(*(volatile uint32_t *) (CLOCK_BASE_ADDRESS + 0x304))	// enable interrupts
+#define CLOCK_INTENCLR	(*(volatile uint32_t *) (CLOCK_BASE_ADDRESS + 0x308))	// disable interrupts
+#define LFCLKRUN		(*(volatile uint32_t *) (CLOCK_BASE_ADDRESS + 0x408))	// status on if START has been triggered
+#define LFCLKSTAT		(*(volatile uint32_t *) (CLOCK_BASE_ADDRESS + 0x418))	// status of LFCLK
+#define LFCLKSRC		(*(volatile uint32_t *) (CLOCK_BASE_ADDRESS + 0x518))	// configure source of LFCLK
 ////////////////////////////////////////////////////////////////////////////////
 
 // Callibration register definitions //
