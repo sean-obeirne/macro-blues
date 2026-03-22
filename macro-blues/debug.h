@@ -8,7 +8,7 @@ void finish(void);
 void success(void);
 void clear(void);
 void fail(void);
-
+void kill(void);
+void win(void);
 
 #endif
-
