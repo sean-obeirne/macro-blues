@@ -1,34 +1,21 @@
 #ifndef GPIO_H
 #define GPIO_H
 
+/*
+ * gpio.h — Low-level GPIO pin configuration and access
+ *
+ * Thin abstraction over the nRF52832 GPIO peripheral.
+ * Higher-level modules (led, keyswitch) call these instead of
+ * touching registers directly.
+ */
+
 #include <stdint.h>
 
-// Base address for GPIO
-#define GPIO_BASE_ADDRESS 0x50000000
+void gpio_pin_cfg_output(uint32_t pin);
+void gpio_pin_cfg_input(uint32_t pin);
 
-// Register definitions
-#define GPIO_OUT	(*(volatile uint32_t *) (GPIO_BASE_ADDRESS + 0x504))
-#define GPIO_OUTSET	(*(volatile uint32_t *) (GPIO_BASE_ADDRESS + 0x508))
-#define GPIO_OUTCLR	(*(volatile uint32_t *) (GPIO_BASE_ADDRESS + 0x50C))
-#define GPIO_IN		(*(volatile uint32_t *) (GPIO_BASE_ADDRESS + 0x510))
-#define GPIO_DIR	(*(volatile uint32_t *) (GPIO_BASE_ADDRESS + 0x514))
-#define GPIO_DIRSET	(*(volatile uint32_t *) (GPIO_BASE_ADDRESS + 0x518))
-#define GPIO_DIRCLR	(*(volatile uint32_t *) (GPIO_BASE_ADDRESS + 0x51C))
+void gpio_pin_set(uint32_t pin);
+void gpio_pin_clear(uint32_t pin);
+int gpio_pin_read(uint32_t pin);
 
-// Pin config register, then pin definition offsets
-#define GPIO_PIN_CNF(n) (*(volatile uint32_t *) ((uintptr_t)GPIO_BASE_ADDRESS + 0x700 + (n * 4)))
-#define DIR_OFFSET 0
-#define INPUT_OFFSET 1
-#define PULL_OFFSET 2
-#define DRIVE_OFFSET 8
-#define SENSE_OFFSET 16
-
-// Useful macros for GPIO configuration
-#define GPIO_DIR_OUTPUT 1
-#define GPIO_DIR_INPUT 0
-
-void out_pin_init(uint32_t pin);
-void in_pin_init(uint32_t pin);
-
-#endif
-
+#endif /* GPIO_H */

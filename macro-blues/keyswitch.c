@@ -1,33 +1,18 @@
-#include <stdint.h>
-#include <stdbool.h>
-
-#include "debug.h"
 #include "gpio.h"
-#include "led.h"
+#include "board.h"
 #include "keyswitch.h"
 
-void gpio_init(void)
+void key_init(void)
 {
-	in_pin_init(7);
+	gpio_pin_cfg_input(PIN_KEY1);
+	/* add more keys here as the macropad grows:
+	 * gpio_pin_cfg_input(PIN_KEY2);
+	 * gpio_pin_cfg_input(PIN_KEY3);
+	 */
 }
 
-int check_input(uint32_t pin)
+int key_pressed(uint32_t pin)
 {
-	return (GPIO_IN >> pin) & 1;
-}
-
-int key_main(void)
-{
-	gpio_init();
-
-	kill();
-	while (true)
-	{
-		if (check_input(7) == 0)
-		{
-			toggle_led(RED);
-		}
-	}
-
-	return 0;
+	/* active-low: pressed = 0 on the pin */
+	return gpio_pin_read(pin) == 0;
 }

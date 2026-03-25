@@ -1,33 +1,48 @@
-#include <stdint.h>
-#include <stdbool.h>
-#include "led.h"
+#include "nrf52832.h"
 #include "gpio.h"
-#include "pins.h"
+#include "timer.h"
+#include "led.h"
 
-void led_init()
+void led_init(void)
 {
-	out_pin_init(RED_LED);
-	out_pin_init(BLUE_LED);
+	gpio_pin_cfg_output(PIN_LED_RED);
+	gpio_pin_cfg_output(PIN_LED_BLUE);
+
+	led_all_off();
 }
 
 void led_on(uint32_t pin)
 {
-	GPIO_OUTSET = (1 << pin);
+	gpio_pin_set(pin);
 }
+
 void led_off(uint32_t pin)
 {
-	GPIO_OUTCLR = (1 << pin);
+	gpio_pin_clear(pin);
 }
 
-int is_led_on(uint32_t pin)
+int led_is_on(uint32_t pin)
 {
-	return (GPIO_OUT & (1 << pin)) != 0; // active-high: pin high = LED on
+	return (GPIO_OUT & (1 << pin)) != 0;
 }
 
-void toggle_led(uint32_t pin)
+void led_toggle(uint32_t pin)
 {
-	if (is_led_on(pin))
+	if (led_is_on(pin))
 		led_off(pin);
 	else
 		led_on(pin);
+}
+
+void led_all_off(void)
+{
+	led_off(PIN_LED_RED);
+	led_off(PIN_LED_BLUE);
+}
+
+void led_flash(uint32_t pin, int ms)
+{
+	led_on(pin);
+	wait_ms(ms);
+	led_off(pin);
 }

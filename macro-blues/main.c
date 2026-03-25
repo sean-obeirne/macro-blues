@@ -1,15 +1,28 @@
+#include <stdbool.h>
+
+#include "board.h"
+#include "timer.h"
 #include "led.h"
-#include "clock.h"
-#include "rtc.h"
 #include "keyswitch.h"
 
-int main()
+int main(void)
 {
+	/* ---- hardware init ---- */
+	timer_init();
 	led_init();
-	clock_init();
-	rtc_init();
+	key_init();
 
-	key_main();
+	/* ---- main loop ---- */
+	led_all_off();
+
+	while (true)
+	{
+		if (key_pressed(PIN_KEY1))
+		{
+			led_toggle(LED_RED);
+			wait_ms(200); /* simple debounce */
+		}
+	}
 
 	return 0;
 }
