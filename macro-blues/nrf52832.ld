@@ -21,11 +21,24 @@ SECTIONS {
         *(.rodata*)
     } > FLASH
 
+    /* Initialized globals (e.g. `int x = 42;`).  The values are stored
+       in flash (AT> FLASH) but live in RAM at run-time (> RAM).  The
+       startup code copies them from _data_flash to _data_start.._data_end. */
+    _data_flash = LOADADDR(.data);
+    .data : {
+        _data_start = .;
+        *(.data*)
+        _data_end = .;
+    } > RAM AT> FLASH
+
     /* Zero-initialized globals. NOLOAD means the linker doesn't try to
-       store zeros in flash — RAM just gets zeroed at startup. */
+       store zeros in flash — RAM just gets zeroed at startup.
+       _bss_start / _bss_end let the startup code find and zero this region. */
     .bss (NOLOAD) : {
+        _bss_start = .;
         *(.bss*)
         *(COMMON)
+        _bss_end = .;
     } > RAM
 }
 

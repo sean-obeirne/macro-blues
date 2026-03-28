@@ -62,4 +62,26 @@
 #define PIN_CNF_DRIVE 8
 #define PIN_CNF_SENSE 16
 
+/* ---- GPIOTE ---- */
+#define GPIOTE_BASE 0x40006000
+
+#define GPIOTE_EVENTS_PORT (*(volatile uint32_t *)(GPIOTE_BASE + 0x17C))
+#define GPIOTE_INTENSET    (*(volatile uint32_t *)(GPIOTE_BASE + 0x304))
+#define GPIOTE_INTENCLR    (*(volatile uint32_t *)(GPIOTE_BASE + 0x308))
+
+#define GPIOTE_IRQN 6  /* NVIC IRQ number for GPIOTE */
+
+/* GPIO PORT event helpers (used with GPIOTE PORT event) */
+#define GPIO_LATCH       (*(volatile uint32_t *)(GPIO_BASE + 0x520))
+#define GPIO_DETECTMODE  (*(volatile uint32_t *)(GPIO_BASE + 0x524))
+
+/* ---- NVIC (Nested Vectored Interrupt Controller) ---- */
+#define NVIC_ISER0 (*(volatile uint32_t *)0xE000E100)  /* Interrupt Set-Enable  */
+#define NVIC_ICER0 (*(volatile uint32_t *)0xE000E180)  /* Interrupt Clear-Enable */
+#define NVIC_ICPR0 (*(volatile uint32_t *)0xE000E280)  /* Interrupt Clear-Pending */
+
+/* ---- Cortex-M4 intrinsics (no CMSIS dependency) ---- */
+#define __WFE()  __asm volatile("wfe")
+#define __SEV()  __asm volatile("sev")
+
 #endif /* NRF52832_H */

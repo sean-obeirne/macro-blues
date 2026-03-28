@@ -12,10 +12,22 @@
 #define PIN_LED_RED 17
 #define PIN_LED_BLUE 19
 
-/* ---- Key switch inputs ---- */
-#define PIN_KEY1 7
-#define PIN_KEY2 11
-#define PIN_KEY3 27
+/* ---- Key switch inputs (active-low, internal pull-up) ---- */
+/* 12-key macropad: each switch wired directly from GPIO to GND */
+#define PIN_KEY1  2   /* A0  — left header  */
+#define PIN_KEY2  3   /* A1  — left header  */
+#define PIN_KEY3  4   /* A2  — left header  */
+#define PIN_KEY4  5   /* A3  — left header  */
+#define PIN_KEY5  28  /* A4  — left header  */
+#define PIN_KEY6  29  /* A5  — left header  */
+#define PIN_KEY7  30  /*     — right header */
+#define PIN_KEY8  7   /*     — right header */
+#define PIN_KEY9  11  /*     — right header */
+#define PIN_KEY10 27  /*     — right header */
+#define PIN_KEY11 15  /*     — right header */
+#define PIN_KEY12 16  /*     — right header */
+
+#define NUM_KEYS  12
 
 /* ---- Analog inputs ---- */
 #define PIN_AIN0 2

@@ -35,6 +35,7 @@ void HardFault_Handler(void) __attribute__((weak, alias("Default_Handler")));
 void SVC_Handler(void) __attribute__((weak, alias("Default_Handler")));
 void PendSV_Handler(void) __attribute__((weak, alias("Default_Handler")));
 void SysTick_Handler(void) __attribute__((weak, alias("Default_Handler")));
+void GPIOTE_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
 
 /*
  * The actual vector table.
@@ -55,8 +56,8 @@ void SysTick_Handler(void) __attribute__((weak, alias("Default_Handler")));
  * Entry 14: PendSV
  * Entry 15: SysTick
  *
- * We stop at 16 entries. Peripheral interrupts (entry 16+) can be added
- * later when we need them (GPIOTE, TIMER, RADIO, etc).
+ * We stop at 16 entries. Peripheral interrupts (entry 16+) default to
+ * Default_Handler, with specific overrides for GPIOTE etc.
  */
 __attribute__((section(".isr_vector"), used)) void (*const vectors[64])(void) = {
     (void (*)(void))(&_stack_top), /* 0:  Initial stack pointer */
@@ -68,7 +69,8 @@ __attribute__((section(".isr_vector"), used)) void (*const vectors[64])(void) = 
     0, 0,                          /* 12-13: Reserved */
     PendSV_Handler,                /* 14: Pendable service request */
     SysTick_Handler,               /* 15: System tick timer */
-    [16 ... 63] = Default_Handler  /* All peripheral interrupts point to Default_Handler */
+    [16 ... 63] = Default_Handler, /* All peripheral IRQs → Default_Handler */
+    [22] = GPIOTE_IRQHandler,      /* IRQ 6:  GPIOTE (overrides Default) */
 };
 
 /*
@@ -92,6 +94,22 @@ void Reset_Handler(void)
      * FPU interrupts pending, which causes immediate Lockup if not cleared.
      * IRQ 39 (FPU) is NVIC->ICPR[1] bit 7 (0xE000E284). */
     *((volatile uint32_t *)0xE000E284) = (1 << 7);
+
+    /* 4. Copy .data section from flash (LMA) into RAM (VMA).
+     *    Initialized globals like `int x = 42;` are stored in flash by the
+     *    linker, but the C code expects them in RAM. We copy them here. */
+    extern uint32_t _data_flash, _data_start, _data_end;
+    uint32_t *src = &_data_flash;
+    uint32_t *dst = &_data_start;
+    while (dst < &_data_end)
+        *dst++ = *src++;
+
+    /* 5. Zero the .bss section.
+     *    Uninitialized globals must start at 0 per the C standard. */
+    extern uint32_t _bss_start, _bss_end;
+    dst = &_bss_start;
+    while (dst < &_bss_end)
+        *dst++ = 0;
 
     main();
     while (1)
