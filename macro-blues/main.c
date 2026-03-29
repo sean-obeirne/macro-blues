@@ -1,60 +1,75 @@
 #include <stdbool.h>
 
 #include "board.h"
-#include "nrf52832.h"
+#include "gpio.h"
 #include "timer.h"
 #include "led.h"
 #include "keyswitch.h"
 #include "debounce.h"
 #include "gpiote.h"
+#include "ble_stack.h"
 
 int main(void)
 {
-	/* ---- hardware init ---- */
-	timer_init();
+	/*
+	 * ---- Phase 1: Pre-SoftDevice init ----
+	 * GPIO, LEDs, keys, debounce — pure hardware, no SD dependency.
+	 */
 	led_init();
 	key_init();
 	debounce_init();
-	gpiote_init();     /* must come after key_init (needs pins configured) */
 
-	/* ---- main loop ---- */
+	/*
+	 * ---- Phase 2: SoftDevice + BLE ----
+	 * Enables the SD (takes over RADIO, RTC0, LFCLK, etc).
+	 * After this call the device is advertising as "Macro Blues".
+	 */
+	ble_stack_init();
+
+	/*
+	 * ---- Phase 3: Post-SoftDevice init ----
+	 * RTC1 needs LFCLK running (the SD started it in phase 2).
+	 * GPIOTE priority must be set for SD coexistence.
+	 */
+	timer_init();
+	gpiote_init();
+
+	/* ---- Main loop ---- */
 	led_all_off();
 
 	int raw[NUM_KEYS];
 
+	/*
+	 * Simplified architecture: always scan keys + debounce on every
+	 * iteration.  GPIOTE is used purely as a wake source, not for
+	 * state management.  The loop decides whether to busy-poll (10 ms)
+	 * or deep-sleep (sd_app_evt_wait) based on direct GPIO reads.
+	 *
+	 * This avoids the fragile IDLE/SCAN state machine and its race
+	 * condition where gpiote_arm() could clear event_flag after the
+	 * ISR already set it during ble_stack_process().
+	 */
 	while (true)
 	{
-		/*
-		 * IDLE: CPU sleeps via WFE until GPIOTE PORT event fires
-		 * (any key pin goes low).  Current draw drops to ~1.5 µA
-		 * while sleeping — critical for battery life.
-		 *
-		 * The WFE pattern is race-free: if the GPIOTE ISR fires
-		 * between the flag check and WFE, the Cortex-M event
-		 * register is set, and WFE returns immediately.
-		 */
-		gpiote_arm();
-		while (!gpiote_event_fired())
-			__WFE();
+		ble_stack_process();
 
-		/*
-		 * ACTIVE: scan and debounce at 10 ms intervals until all
-		 * keys are released and debounce counters have settled.
-		 * Then go back to sleep.
-		 */
-		do {
-			key_scan(raw);
-			debounce_update(raw);
+		key_scan(raw);
+		debounce_update(raw);
 
-			for (int i = 0; i < NUM_KEYS; i++) {
-				if (debounce_fell(i))
-					led_toggle(LED_RED);
-				if (debounce_rose(i))
-					led_toggle(LED_BLUE);
-			}
+		for (int i = 0; i < NUM_KEYS; i++) {
+			if (debounce_fell(i))
+				led_toggle(LED_RED);
+		}
 
+		if (key_any_pressed() || debounce_settling()) {
+			/* Keys are active — poll at ~10 ms for debounce. */
 			wait_ms(10);
-		} while (key_any_pressed() || debounce_settling());
+		} else {
+			/* Idle — arm GPIOTE and sleep until a key press
+			 * or BLE event wakes the CPU. */
+			gpiote_arm();
+			ble_stack_wait();
+		}
 	}
 
 	return 0;

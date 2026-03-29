@@ -1,6 +1,6 @@
 MEMORY {
     FLASH (rx) : ORIGIN = 0x00026000, LENGTH = 0x5A000
-    RAM (rwx)  : ORIGIN = 0x20002CE0, LENGTH = 0xD320
+    RAM (rwx)  : ORIGIN = 0x20003400, LENGTH = 0xCC00
 }
 
 /* The stack grows downward from the top of RAM.

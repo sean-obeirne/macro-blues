@@ -12,35 +12,25 @@
 
 #include <stdint.h>
 
-/* ---- CLOCK ---- */
-#define CLOCK_BASE 0x40000000
+/*
+ * CLOCK and RTC0 are owned by the SoftDevice — do not access directly.
+ * LFCLK is started by sd_softdevice_enable().  Use RTC1 for app timing.
+ */
 
-#define TASKS_LFCLKSTART (*(volatile uint32_t *)(CLOCK_BASE + 0x008))
-#define TASKS_LFCLKSTOP (*(volatile uint32_t *)(CLOCK_BASE + 0x00C))
+/* ---- RTC1 (application timer) ---- */
+#define RTC1_BASE 0x40011000
 
-#define EVENTS_LFCLKSTARTED (*(volatile uint32_t *)(CLOCK_BASE + 0x104))
+#define RTC1_TASKS_START (*(volatile uint32_t *)(RTC1_BASE + 0x000))
+#define RTC1_TASKS_STOP  (*(volatile uint32_t *)(RTC1_BASE + 0x004))
+#define RTC1_TASKS_CLEAR (*(volatile uint32_t *)(RTC1_BASE + 0x008))
 
-#define CLOCK_INTENSET (*(volatile uint32_t *)(CLOCK_BASE + 0x304))
-#define CLOCK_INTENCLR (*(volatile uint32_t *)(CLOCK_BASE + 0x308))
-#define LFCLKRUN (*(volatile uint32_t *)(CLOCK_BASE + 0x408))
-#define LFCLKSTAT (*(volatile uint32_t *)(CLOCK_BASE + 0x418))
-#define LFCLKSRC (*(volatile uint32_t *)(CLOCK_BASE + 0x518))
+#define RTC1_EVENTS_TICK (*(volatile uint32_t *)(RTC1_BASE + 0x100))
 
-/* ---- RTC0 ---- */
-#define RTC0_BASE 0x4000B000
-
-#define RTC_TASKS_START (*(volatile uint32_t *)(RTC0_BASE + 0x000))
-#define RTC_TASKS_STOP (*(volatile uint32_t *)(RTC0_BASE + 0x004))
-#define RTC_TASKS_CLEAR (*(volatile uint32_t *)(RTC0_BASE + 0x008))
-#define RTC_TASKS_TRIGOVRFLW (*(volatile uint32_t *)(RTC0_BASE + 0x00C))
-
-#define RTC_EVENTS_TICK (*(volatile uint32_t *)(RTC0_BASE + 0x100))
-#define RTC_EVENTS_OVRFLW (*(volatile uint32_t *)(RTC0_BASE + 0x104))
-
-#define RTC_INTENSET (*(volatile uint32_t *)(RTC0_BASE + 0x304))
-#define RTC_INTENCLR (*(volatile uint32_t *)(RTC0_BASE + 0x308))
-#define RTC_COUNTER (*(volatile uint32_t *)(RTC0_BASE + 0x504))
-#define RTC_PRESCALER (*(volatile uint32_t *)(RTC0_BASE + 0x508))
+#define RTC1_INTENSET  (*(volatile uint32_t *)(RTC1_BASE + 0x304))
+#define RTC1_INTENCLR  (*(volatile uint32_t *)(RTC1_BASE + 0x308))
+#define RTC1_EVTENSET  (*(volatile uint32_t *)(RTC1_BASE + 0x344))
+#define RTC1_COUNTER   (*(volatile uint32_t *)(RTC1_BASE + 0x504))
+#define RTC1_PRESCALER (*(volatile uint32_t *)(RTC1_BASE + 0x508))
 
 /* ---- GPIO ---- */
 #define GPIO_BASE 0x50000000
@@ -80,8 +70,10 @@
 #define NVIC_ICER0 (*(volatile uint32_t *)0xE000E180)  /* Interrupt Clear-Enable */
 #define NVIC_ICPR0 (*(volatile uint32_t *)0xE000E280)  /* Interrupt Clear-Pending */
 
-/* ---- Cortex-M4 intrinsics (no CMSIS dependency) ---- */
-#define __WFE()  __asm volatile("wfe")
-#define __SEV()  __asm volatile("sev")
+/* Set IRQ priority.  Cortex-M4 nRF52 implements 3 priority bits (0-7),
+ * stored in the top 3 bits of an 8-bit register.  SoftDevice reserves
+ * priorities 0, 1, and 4.  Application code should use 2, 3, 5, 6, or 7. */
+#define NVIC_SET_PRIORITY(irqn, prio) \
+	(*(volatile uint8_t *)(0xE000E400 + (irqn)) = (uint8_t)((prio) << 5))
 
 #endif /* NRF52832_H */

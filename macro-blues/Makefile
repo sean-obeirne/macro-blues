@@ -10,13 +10,14 @@ LD      = arm-none-eabi-gcc
 BUILD   = build
 TARGET  = $(BUILD)/macro-blues
 
-SRCS = startup.c main.c timer.c gpio.c led.c keyswitch.c debounce.c gpiote.c
+SRCS = startup.c main.c timer.c gpio.c led.c keyswitch.c debounce.c gpiote.c ble_stack.c
 
 INCLUDES = \
 	-I. \
 	-I$(SDK)/components/softdevice/s132/headers \
 	-I$(SDK)/components/softdevice/s132/headers/nrf52 \
-	-I$(SDK)/components/toolchain/cmsis/include
+	-I$(SDK)/components/toolchain/cmsis/include \
+	-I$(SDK)/modules/nrfx/mdk
 
 CFLAGS = \
 	-mcpu=cortex-m4 \
@@ -60,9 +61,18 @@ $(TARGET).elf: $(OBJS)
 $(TARGET).hex: $(TARGET).elf
 	$(OBJCOPY) -O ihex $< $@
 
-# Flash SoftDevice first (only needed once)
-# NOTE: double-tap reset first, wait for blue LED to breathe, then run this
+# Flash SoftDevice (only needed once).
+# If --touch 1200 times out, enter DFU manually:
+#   Hold DFU button, tap RESET, release DFU.  LED pulses yellow.
+#   Then run:  make flash-sd-manual
 flash-sd:
+	adafruit-nrfutil dfu genpkg --dev-type 0x0052 --sd-req 0x00 \
+		--softdevice $(SD_HEX) $(BUILD)/sd_package.zip
+	adafruit-nrfutil dfu serial --package $(BUILD)/sd_package.zip \
+		-p $(PORT) -b $(BAUD) --singlebank --touch 1200
+
+# Manual DFU: board must already be in DFU mode (yellow LED pulsing)
+flash-sd-manual:
 	adafruit-nrfutil dfu genpkg --dev-type 0x0052 --sd-req 0x00 \
 		--softdevice $(SD_HEX) $(BUILD)/sd_package.zip
 	adafruit-nrfutil dfu serial --package $(BUILD)/sd_package.zip \

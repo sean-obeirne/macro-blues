@@ -2,6 +2,7 @@
 #include "board.h"
 #include "keyswitch.h"
 #include "gpiote.h"
+#include "ble_stack.h"
 
 /*
  * gpiote.c — GPIOTE PORT event driver
@@ -11,9 +12,22 @@
  * in PIN_CNF is set to SENSE_LOW — when any key is pressed (active-low),
  * the PORT event fires.
  *
- * The ISR disables its own interrupt to prevent an IRQ storm while a
- * key is held (PORT event is level-triggered).  The main loop calls
- * gpiote_arm() to re-enable it before going back to sleep.
+ * In DETECTMODE=0 (default), the PORT event fires on the 0→1 edge of
+ * the combinatorial DETECT signal (OR of all SENSE matches).  This
+ * means it fires ONCE when the first key goes low, and won't re-fire
+ * until all keys release (DETECT→0) and another is pressed (DETECT→1).
+ * No IRQ storm, no need to disable/re-enable the interrupt.
+ *
+ * Important:
+ *   - We do NOT clear GPIO_LATCH anywhere.  In Default DETECTMODE the
+ *     DETECT signal is purely combinatorial — LATCH is just a record
+ *     and does not affect DETECT or PORT events.  The nRF5 SDK driver
+ *     follows this same pattern.  Clearing LATCH is unnecessary and
+ *     can interact badly with Errata 173 (write propagation delay)
+ *     and Errata 210 (spurious LATCH bits).
+ *   - After clearing EVENTS_PORT we read the register back and issue
+ *     a DSB to ensure the peripheral has actually dropped the IRQ line
+ *     before we clear the NVIC pending bit.
  */
 
 static volatile int event_flag;
@@ -23,53 +37,63 @@ void gpiote_init(void)
 	/*
 	 * Configure SENSE_LOW on each key pin.
 	 *
-	 * We only modify the SENSE field (bits 16-17) of PIN_CNF,
-	 * leaving DIR, INPUT, PULL, DRIVE as already set by
-	 * gpio_pin_cfg_input() during key_init().
+	 * Errata 210 workaround: writing PIN_CNF with INPUT=Connected
+	 * and SENSE≠Disabled in the SAME register write can spuriously
+	 * set LATCH bits.  We avoid this by first writing with SENSE
+	 * disabled, then setting SENSE in a separate write.
 	 *
-	 * SENSE field values:
-	 *   0 = disabled
-	 *   2 = sense for high level
-	 *   3 = sense for low level  ← what we want (active-low keys)
+	 * key_init() already configured INPUT=0 (connected), so SENSE is
+	 * the only field we're changing — but the hardware sees the full
+	 * register write, so we still need the two-step sequence.
 	 */
 	for (int i = 0; i < NUM_KEYS; i++) {
 		uint32_t pin = key_pins[i];
 		uint32_t cnf = GPIO_PIN_CNF(pin);
-		cnf &= ~(3u << PIN_CNF_SENSE);   /* clear SENSE field */
-		cnf |=  (3u << PIN_CNF_SENSE);    /* SENSE_LOW = 3 */
+
+		/* Step 1: ensure SENSE=Disabled (INPUT already 0) */
+		cnf &= ~(3u << PIN_CNF_SENSE);
+		GPIO_PIN_CNF(pin) = cnf;
+
+		/* Step 2: set SENSE_LOW in a separate write */
+		cnf |= (3u << PIN_CNF_SENSE);   /* SENSE_LOW = 3 */
 		GPIO_PIN_CNF(pin) = cnf;
 	}
 
-	/* Default DETECTMODE (0) — combined level-based detect.
-	 * All pins OR together into a single PORT event. */
+	/* Default DETECTMODE (0) — combinatorial level-based detect.
+	 * PORT fires on the 0→1 edge of DETECT (no storm). */
 	GPIO_DETECTMODE = 0;
 
-	/* Clear any stale PORT event and LATCH bits */
-	GPIO_LATCH = GPIO_LATCH;      /* write 1s to clear latched bits */
+	/* Clear any stale PORT event with read-back barrier */
 	GPIOTE_EVENTS_PORT = 0;
+	(void)GPIOTE_EVENTS_PORT;   /* read-back: wait for peripheral */
+	__asm volatile ("dsb" ::: "memory");
 
 	/* Enable PORT event interrupt in GPIOTE peripheral (bit 31) */
 	GPIOTE_INTENSET = (1u << 31);
 
-	/* Enable GPIOTE IRQ in NVIC (IRQ 6) */
-	NVIC_ICPR0 = (1u << GPIOTE_IRQN);   /* clear any pending */
-	NVIC_ISER0 = (1u << GPIOTE_IRQN);   /* enable */
+	/* Enable GPIOTE IRQ in NVIC (IRQ 6) at app-level priority.
+	 * Must use sd_nvic_* wrappers — direct NVIC writes are ignored
+	 * when the SoftDevice is active. */
+	sd_nvic_irq_set_priority(GPIOTE_IRQN, 7);
+	sd_nvic_irq_clear_pending(GPIOTE_IRQN);
+	sd_nvic_irq_enable(GPIOTE_IRQN);
 
 	event_flag = 0;
 }
 
 void gpiote_arm(void)
 {
-	event_flag = 0;
-
-	/* Clear stale events so we don't wake immediately */
-	GPIO_LATCH = GPIO_LATCH;
+	/*
+	 * Clear stale PORT event so sd_app_evt_wait() doesn't return
+	 * immediately.  The read-back + DSB ensures the peripheral has
+	 * dropped the IRQ line before we clear the NVIC pending bit.
+	 */
 	GPIOTE_EVENTS_PORT = 0;
-	NVIC_ICPR0 = (1u << GPIOTE_IRQN);
+	(void)GPIOTE_EVENTS_PORT;              /* read-back barrier */
+	__asm volatile ("dsb" ::: "memory");   /* complete all writes */
+	sd_nvic_irq_clear_pending(GPIOTE_IRQN);
 
-	/* Re-enable interrupt (the ISR disables it to prevent storm) */
-	GPIOTE_INTENSET = (1u << 31);
-	NVIC_ISER0 = (1u << GPIOTE_IRQN);
+	event_flag = 0;
 }
 
 int gpiote_event_fired(void)
@@ -84,21 +108,17 @@ int gpiote_event_fired(void)
 /*
  * GPIOTE interrupt handler.
  *
- * Fires when any key pin goes low (SENSE_LOW → PORT event).
- * We disable the interrupt immediately to prevent an IRQ storm —
- * the PORT event is level-triggered, so it would keep firing as
- * long as the key is held.  gpiote_arm() re-enables it later.
+ * Fires once when DETECT transitions 0→1 (any key pressed).
+ * We clear EVENTS_PORT with a read-back barrier (required by the
+ * nRF52 peripheral bus) but do NOT clear LATCH — it is not needed
+ * in Default DETECTMODE and the SDK driver follows the same pattern.
  */
 void GPIOTE_IRQHandler(void)
 {
 	if (GPIOTE_EVENTS_PORT) {
 		GPIOTE_EVENTS_PORT = 0;
-		GPIO_LATCH = GPIO_LATCH;     /* clear all latched pin flags */
-
-		/* Disable interrupt to prevent storm while key is held.
-		 * The main loop re-enables via gpiote_arm() before sleeping. */
-		GPIOTE_INTENCLR = (1u << 31);
-
+		(void)GPIOTE_EVENTS_PORT;   /* read-back barrier */
+		__asm volatile ("dsb" ::: "memory");
 		event_flag = 1;
 	}
 }

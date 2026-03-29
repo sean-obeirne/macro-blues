@@ -78,11 +78,14 @@ __attribute__((section(".isr_vector"), used)) void (*const vectors[64])(void) = 
  */
 void Reset_Handler(void)
 {
-    /* 1. Set Vector Table Offset Register (VTOR) */
-    extern void (*const vectors[])(void);
-    *((volatile uint32_t *)0xE000ED08) = (uint32_t)vectors;
+    /*
+     * NOTE: We do NOT set VTOR here.  It stays at 0x00000000 (reset default),
+     * pointing to the MBR's vector table.  The MBR forwards SVC calls to the
+     * SoftDevice and other interrupts to our app's table at 0x26000.
+     * Setting VTOR = 0x26000 would break all SoftDevice SVC calls.
+     */
 
-    /* 2. Enable FPU. We compile with -mfloat-abi=hard, meaning the compiler
+    /* 1. Enable FPU. We compile with -mfloat-abi=hard, meaning the compiler
      * might emit FPU instructions at any time. If the FPU is not enabled
      * in the CPACR (Coprocessor Access Control Register), we will HardFault.
      * SCB->CPACR is at 0xE000ED88. Bits 20-23 must be 0xF to enable CP10/CP11. */
@@ -90,12 +93,12 @@ void Reset_Handler(void)
     // Execute a sync barrier to ensure FPU is enabled before proceeding
     __asm volatile("dsb \n isb \n");
 
-    /* 3. Clear pending FPU interrupts. Adafruit's bootloader often leaves
+    /* 2. Clear pending FPU interrupts. Adafruit's bootloader often leaves
      * FPU interrupts pending, which causes immediate Lockup if not cleared.
      * IRQ 39 (FPU) is NVIC->ICPR[1] bit 7 (0xE000E284). */
     *((volatile uint32_t *)0xE000E284) = (1 << 7);
 
-    /* 4. Copy .data section from flash (LMA) into RAM (VMA).
+    /* 3. Copy .data section from flash (LMA) into RAM (VMA).
      *    Initialized globals like `int x = 42;` are stored in flash by the
      *    linker, but the C code expects them in RAM. We copy them here. */
     extern uint32_t _data_flash, _data_start, _data_end;
@@ -104,7 +107,7 @@ void Reset_Handler(void)
     while (dst < &_data_end)
         *dst++ = *src++;
 
-    /* 5. Zero the .bss section.
+    /* 4. Zero the .bss section.
      *    Uninitialized globals must start at 0 per the C standard. */
     extern uint32_t _bss_start, _bss_end;
     dst = &_bss_start;
