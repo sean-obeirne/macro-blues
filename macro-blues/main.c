@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <string.h>
 
 #include "board.h"
 #include "gpio.h"
@@ -8,6 +9,17 @@
 #include "debounce.h"
 #include "gpiote.h"
 #include "ble_stack.h"
+#include "hid_service.h"
+
+/*
+ * Temporary keymap: KEY1..KEY12 → a..l
+ * This will be replaced by a proper keymap/macro engine in Task 7.
+ */
+static const uint8_t keymap[NUM_KEYS] = {
+	HID_KEY_A, HID_KEY_B, HID_KEY_C, HID_KEY_D,
+	HID_KEY_E, HID_KEY_F, HID_KEY_G, HID_KEY_H,
+	HID_KEY_I, HID_KEY_J, HID_KEY_K, HID_KEY_L,
+};
 
 int main(void)
 {
@@ -25,6 +37,7 @@ int main(void)
 	 * After this call the device is advertising as "Macro Blues".
 	 */
 	ble_stack_init();
+	hid_service_init();
 
 	/*
 	 * ---- Phase 3: Post-SoftDevice init ----
@@ -38,6 +51,8 @@ int main(void)
 	led_all_off();
 
 	int raw[NUM_KEYS];
+	int prev_pressed[NUM_KEYS];
+	memset(prev_pressed, 0, sizeof(prev_pressed));
 
 	/*
 	 * Simplified architecture: always scan keys + debounce on every
@@ -45,9 +60,8 @@ int main(void)
 	 * state management.  The loop decides whether to busy-poll (10 ms)
 	 * or deep-sleep (sd_app_evt_wait) based on direct GPIO reads.
 	 *
-	 * This avoids the fragile IDLE/SCAN state machine and its race
-	 * condition where gpiote_arm() could clear event_flag after the
-	 * ISR already set it during ble_stack_process().
+	 * On key state change, we build an HID report with all currently
+	 * pressed keys and send it as a notification.
 	 */
 	while (true)
 	{
@@ -56,9 +70,24 @@ int main(void)
 		key_scan(raw);
 		debounce_update(raw);
 
+		/* Check if any key changed state (fell or rose) */
+		int changed = 0;
 		for (int i = 0; i < NUM_KEYS; i++) {
-			if (debounce_fell(i))
-				led_toggle(LED_RED);
+			if (debounce_fell(i) || debounce_rose(i))
+				changed = 1;
+		}
+
+		if (changed && ble_stack_connected()) {
+			/* Build a report with all currently pressed keycodes */
+			uint8_t keys[6];
+			uint8_t count = 0;
+			for (int i = 0; i < NUM_KEYS && count < 6; i++) {
+				if (debounce_state(i)) {
+					keys[count++] = keymap[i];
+				}
+			}
+			hid_service_send_report(0, keys, count);
+			led_toggle(LED_RED);
 		}
 
 		if (key_any_pressed() || debounce_settling()) {

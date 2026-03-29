@@ -9,6 +9,7 @@
 #include "nrf_error.h"
 
 #include "ble_stack.h"
+#include "hid_service.h"
 #include "led.h"
 
 /*
@@ -123,25 +124,25 @@ static void error_blink(int n, uint32_t err)
         for (int i = 0; i < n; i++)
         {
             led_on(LED_RED);
-            for (d = 0; d < 800000; d++)
+            for (d = 0; d < 1600000; d++)
                 ;
             led_off(LED_RED);
-            for (d = 0; d < 800000; d++)
+            for (d = 0; d < 1600000; d++)
                 ;
         }
-        for (d = 0; d < 1500000; d++)
+        for (d = 0; d < 3000000; d++)
             ; /* gap */
         /* Blue blinks — the actual NRF error code */
         for (uint32_t i = 0; i < err; i++)
         {
             led_on(LED_BLUE);
-            for (d = 0; d < 800000; d++)
+            for (d = 0; d < 1600000; d++)
                 ;
             led_off(LED_BLUE);
-            for (d = 0; d < 800000; d++)
+            for (d = 0; d < 1600000; d++)
                 ;
         }
-        for (d = 0; d < 3000000; d++)
+        for (d = 0; d < 5000000; d++)
             ; /* long pause */
     }
 }
@@ -171,8 +172,26 @@ static void softdevice_enable(void)
 
 static void ble_enable(void)
 {
-    uint32_t ram_start = 0x20003400; /* must match linker script RAM origin */
-    uint32_t err = sd_ble_enable(&ram_start);
+    uint32_t ram_start = 0x20004000; /* must match linker script RAM origin */
+    uint32_t err;
+
+    /*
+     * Increase the GATT attribute table from the default 1408 bytes
+     * to 2048.  The HID service adds ~11 attributes (service decl,
+     * 4 char decls, 4 values, CCCD, Report Reference) on top of the
+     * default GAP/GATT services — the default table is too small and
+     * sd_ble_gatts_characteristic_add returns NRF_ERROR_NOT_SUPPORTED.
+     *
+     * Must be called BEFORE sd_ble_enable().
+     */
+    ble_cfg_t cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.gatts_cfg.attr_tab_size.attr_tab_size = 2048;
+    err = sd_ble_cfg_set(BLE_GATTS_CFG_ATTR_TAB_SIZE, &cfg, ram_start);
+    if (err != NRF_SUCCESS)
+        error_blink(2, err);
+
+    err = sd_ble_enable(&ram_start);
     if (err == NRF_ERROR_NO_MEM)
     {
         /*
@@ -319,13 +338,61 @@ void ble_stack_process(void)
             sd_ble_gap_adv_start(adv_handle, BLE_CONN_CFG_TAG_DEFAULT);
             break;
 
-            /* ---- Security (reject for now — added properly with HID) ---- */
+            /* ---- Security (Just Works pairing for HID) ---- */
 
-        case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
+        case BLE_GAP_EVT_SEC_PARAMS_REQUEST: {
+            /* Accept pairing with Just Works (no MITM, no display).
+             * The central initiates pairing; we respond with our params
+             * and a keyset so the SD has buffers for key exchange. */
+            static ble_gap_enc_key_t own_enc_key;
+            static ble_gap_id_key_t  own_id_key;
+            static ble_gap_enc_key_t peer_enc_key;
+            static ble_gap_id_key_t  peer_id_key;
+
+            ble_gap_sec_keyset_t keyset;
+            memset(&keyset, 0, sizeof(keyset));
+            keyset.keys_own.p_enc_key  = &own_enc_key;
+            keyset.keys_own.p_id_key   = &own_id_key;
+            keyset.keys_peer.p_enc_key = &peer_enc_key;
+            keyset.keys_peer.p_id_key  = &peer_id_key;
+
+            ble_gap_sec_params_t sec_params;
+            memset(&sec_params, 0, sizeof(sec_params));
+            sec_params.bond         = 1;
+            sec_params.mitm         = 0;
+            sec_params.lesc         = 0;
+            sec_params.keypress     = 0;
+            sec_params.io_caps      = BLE_GAP_IO_CAPS_NONE;
+            sec_params.oob          = 0;
+            sec_params.min_key_size = 7;
+            sec_params.max_key_size = 16;
+            sec_params.kdist_own.enc  = 1;
+            sec_params.kdist_own.id   = 1;
+            sec_params.kdist_peer.enc = 1;
+            sec_params.kdist_peer.id  = 1;
+
             sd_ble_gap_sec_params_reply(
                 evt->evt.gap_evt.conn_handle,
-                BLE_GAP_SEC_STATUS_PAIRING_NOT_SUPP,
-                NULL, NULL);
+                BLE_GAP_SEC_STATUS_SUCCESS,
+                &sec_params, &keyset);
+            break;
+        }
+
+        case BLE_GAP_EVT_AUTH_STATUS:
+            /* Pairing complete (success or failure).
+             * We don't persist bonds yet — that comes with flash storage. */
+            break;
+
+        case BLE_GAP_EVT_SEC_INFO_REQUEST:
+            /* Central is asking for stored bond keys (reconnection).
+             * We don't persist bonds yet, so reply with NULLs. */
+            sd_ble_gap_sec_info_reply(
+                evt->evt.gap_evt.conn_handle,
+                NULL, NULL, NULL);
+            break;
+
+        case BLE_GAP_EVT_CONN_SEC_UPDATE:
+            /* Connection security level changed — nothing to do. */
             break;
 
             /* ---- Connection parameter negotiation ---- */
@@ -357,11 +424,24 @@ void ble_stack_process(void)
                 evt->evt.gap_evt.conn_handle, NULL, NULL);
             break;
 
-            /* ---- GATT system attributes ---- */
+            /* ---- GATT events ---- */
 
         case BLE_GATTS_EVT_SYS_ATTR_MISSING:
             sd_ble_gatts_sys_attr_set(
                 evt->evt.gatts_evt.conn_handle, NULL, 0, 0);
+            break;
+
+        case BLE_GATTS_EVT_WRITE: {
+            /* Forward CCCD writes (and any other GATTS writes)
+             * to the HID service so it can track notification state. */
+            ble_gatts_evt_write_t *w = &evt->evt.gatts_evt.params.write;
+            hid_service_on_write(w->handle, w->data, w->len);
+            break;
+        }
+
+        case BLE_GATTS_EVT_EXCHANGE_MTU_REQUEST:
+            sd_ble_gatts_exchange_mtu_reply(
+                evt->evt.gatts_evt.conn_handle, 23);
             break;
 
             /* ---- Catch-all ---- */
