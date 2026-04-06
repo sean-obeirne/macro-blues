@@ -1,5 +1,8 @@
 MEMORY {
-    FLASH (rx) : ORIGIN = 0x00026000, LENGTH = 0x5A000
+    /* App flash: 0x26000–0x72FFF.  Page 0x73000 = bond storage.
+       Bootloader lives at 0x74000+ (per UICR 0x10001014).
+       0x7E000/0x7F000 = MBR params / bootloader settings. */
+    FLASH (rx) : ORIGIN = 0x00026000, LENGTH = 0x4D000
     RAM (rwx)  : ORIGIN = 0x20004000, LENGTH = 0xC000
 }
 
