@@ -10,7 +10,7 @@ LD      = arm-none-eabi-gcc
 BUILD   = build
 TARGET  = $(BUILD)/macro-blues
 
-SRCS = startup.c main.c timer.c gpio.c led.c keyswitch.c debounce.c gpiote.c ble_stack.c hid_service.c
+SRCS = startup.c main.c timer.c gpio.c led.c keyswitch.c debounce.c gpiote.c ble_stack.c hid_service.c bond.c
 
 INCLUDES = \
 	-I. \

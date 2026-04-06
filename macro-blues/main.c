@@ -28,6 +28,16 @@ int main(void)
 	 * GPIO, LEDs, keys, debounce — pure hardware, no SD dependency.
 	 */
 	led_init();
+
+	/* Diagnostic: 3 quick red blinks to prove we're alive.
+	 * If you see these, the bootloader jumped to our code OK. */
+	for (int i = 0; i < 3; i++) {
+		led_on(LED_RED);
+		for (volatile int d = 0; d < 400000; d++) ;
+		led_off(LED_RED);
+		for (volatile int d = 0; d < 400000; d++) ;
+	}
+
 	key_init();
 	debounce_init();
 
@@ -38,6 +48,14 @@ int main(void)
 	 */
 	ble_stack_init();
 	hid_service_init();
+
+	/* Diagnostic: 3 quick blue blinks = BLE + HID init OK */
+	for (int i = 0; i < 3; i++) {
+		led_on(LED_BLUE);
+		for (volatile int d = 0; d < 400000; d++) ;
+		led_off(LED_BLUE);
+		for (volatile int d = 0; d < 400000; d++) ;
+	}
 
 	/*
 	 * ---- Phase 3: Post-SoftDevice init ----

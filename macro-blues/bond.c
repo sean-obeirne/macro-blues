@@ -36,7 +36,7 @@
  * for the NRF_EVT_FLASH_OPERATION_SUCCESS event for simplicity.
  */
 
-#define BOND_PAGE 0x77000
+#define BOND_PAGE 0x73000
 #define BOND_MAGIC 0xB09D0001 /* "BOND" version 1 */
 
 /* On-flash bond record.  Must be a multiple of 4 bytes for sd_flash_write. */

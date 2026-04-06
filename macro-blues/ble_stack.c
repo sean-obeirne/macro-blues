@@ -10,6 +10,7 @@
 
 #include "ble_stack.h"
 #include "hid_service.h"
+#include "bond.h"
 #include "led.h"
 
 /*
@@ -54,6 +55,13 @@ static uint8_t adv_handle = BLE_GAP_ADV_SET_HANDLE_NOT_SET;
 static uint8_t adv_data_buf[31];
 static uint8_t srp_data_buf[31];
 
+/* Pairing keyset — file-scope so the buffers survive across BLE events.
+ * Filled during SEC_PARAMS_REQUEST, read during AUTH_STATUS to save bond. */
+static ble_gap_enc_key_t own_enc_key;
+static ble_gap_id_key_t  own_id_key;
+static ble_gap_enc_key_t peer_enc_key;
+static ble_gap_id_key_t  peer_id_key;
+
 /* ---- SoftDevice fault handler ---- */
 
 static void sd_fault_handler(uint32_t id, uint32_t pc, uint32_t info)
@@ -78,30 +86,34 @@ static uint8_t build_adv_data(uint8_t *buf)
     buf[pos++] = BLE_GAP_AD_TYPE_FLAGS;
     buf[pos++] = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
 
-    /* Complete Local Name: "Macro Blues" */
-    buf[pos++] = 1 + DEVICE_NAME_LEN;
-    buf[pos++] = BLE_GAP_AD_TYPE_COMPLETE_LOCAL_NAME;
-    memcpy(&buf[pos], DEVICE_NAME, DEVICE_NAME_LEN);
-    pos += DEVICE_NAME_LEN;
+    /* Complete list of 16-bit service UUIDs.
+     * Apple's Bluetooth stack needs these in the PRIMARY packet
+     * (not scan response) to recognize the device as a keyboard. */
+    buf[pos++] = 7;   /* length: 1 + 3×2 */
+    buf[pos++] = BLE_GAP_AD_TYPE_16BIT_SERVICE_UUID_COMPLETE;
+    buf[pos++] = 0x12; buf[pos++] = 0x18; /* HID Service  0x1812 */
+    buf[pos++] = 0x0F; buf[pos++] = 0x18; /* Battery Svc  0x180F */
+    buf[pos++] = 0x0A; buf[pos++] = 0x18; /* Device Info   0x180A */
 
-    /* Appearance: HID Keyboard (0x03C1 = 961) */
+    /* Appearance: HID Keyboard */
     buf[pos++] = 3;
     buf[pos++] = BLE_GAP_AD_TYPE_APPEARANCE;
     buf[pos++] = (uint8_t)(BLE_APPEARANCE_HID_KEYBOARD & 0xFF);
     buf[pos++] = (uint8_t)(BLE_APPEARANCE_HID_KEYBOARD >> 8);
 
-    return pos; /* total: 3 + 13 + 5 = 21 bytes (under 31 max) */
+    return pos; /* total: 3 + 8 + 5 = 16 bytes (under 31 max) */
 }
 
 static uint8_t build_scan_rsp_data(uint8_t *buf)
 {
     uint8_t pos = 0;
 
-    /* Complete list of 16-bit service UUIDs: HID Service (0x1812) */
-    buf[pos++] = 3;
-    buf[pos++] = BLE_GAP_AD_TYPE_16BIT_SERVICE_UUID_COMPLETE;
-    buf[pos++] = 0x12; /* low byte of 0x1812 */
-    buf[pos++] = 0x18; /* high byte */
+    /* Complete Local Name — in scan response so it doesn't crowd
+     * the primary packet (which Apple uses for service discovery). */
+    buf[pos++] = 1 + DEVICE_NAME_LEN;
+    buf[pos++] = BLE_GAP_AD_TYPE_COMPLETE_LOCAL_NAME;
+    memcpy(&buf[pos], DEVICE_NAME, DEVICE_NAME_LEN);
+    pos += DEVICE_NAME_LEN;
 
     return pos;
 }
@@ -186,7 +198,7 @@ static void ble_enable(void)
      */
     ble_cfg_t cfg;
     memset(&cfg, 0, sizeof(cfg));
-    cfg.gatts_cfg.attr_tab_size.attr_tab_size = 2048;
+    cfg.gatts_cfg.attr_tab_size.attr_tab_size = 2560;
     err = sd_ble_cfg_set(BLE_GATTS_CFG_ATTR_TAB_SIZE, &cfg, ram_start);
     if (err != NRF_SUCCESS)
         error_blink(2, err);
@@ -277,6 +289,7 @@ void ble_stack_init(void)
     softdevice_enable();
     ble_enable();
     gap_params_init();
+    bond_init();
     advertising_init();
 
     /* Start advertising immediately */
@@ -329,6 +342,30 @@ void ble_stack_process(void)
         case BLE_GAP_EVT_CONNECTED:
             conn_handle = evt->evt.gap_evt.conn_handle;
             led_on(LED_BLUE);
+
+            /* Kick off security immediately.  Apple devices often wait
+             * for the peripheral to initiate.  If we have a bond, the
+             * SD will try to re-encrypt.  If not, this triggers pairing.
+             */
+            {
+                ble_gap_sec_params_t sec_params;
+                memset(&sec_params, 0, sizeof(sec_params));
+                sec_params.bond         = 1;
+                sec_params.mitm         = 0;
+                sec_params.lesc         = 0;
+                sec_params.keypress     = 0;
+                sec_params.io_caps      = BLE_GAP_IO_CAPS_NONE;
+                sec_params.oob          = 0;
+                sec_params.min_key_size = 7;
+                sec_params.max_key_size = 16;
+                sec_params.kdist_own.enc  = 1;
+                sec_params.kdist_own.id   = 1;
+                sec_params.kdist_peer.enc = 1;
+                sec_params.kdist_peer.id  = 1;
+
+                sd_ble_gap_authenticate(
+                    evt->evt.gap_evt.conn_handle, &sec_params);
+            }
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
@@ -341,14 +378,8 @@ void ble_stack_process(void)
             /* ---- Security (Just Works pairing for HID) ---- */
 
         case BLE_GAP_EVT_SEC_PARAMS_REQUEST: {
-            /* Accept pairing with Just Works (no MITM, no display).
-             * The central initiates pairing; we respond with our params
-             * and a keyset so the SD has buffers for key exchange. */
-            static ble_gap_enc_key_t own_enc_key;
-            static ble_gap_id_key_t  own_id_key;
-            static ble_gap_enc_key_t peer_enc_key;
-            static ble_gap_id_key_t  peer_id_key;
-
+            /* Accept pairing with Just Works.  Provide keyset buffers
+             * so the SD can store the exchanged keys. */
             ble_gap_sec_keyset_t keyset;
             memset(&keyset, 0, sizeof(keyset));
             keyset.keys_own.p_enc_key  = &own_enc_key;
@@ -378,18 +409,34 @@ void ble_stack_process(void)
             break;
         }
 
-        case BLE_GAP_EVT_AUTH_STATUS:
-            /* Pairing complete (success or failure).
-             * We don't persist bonds yet — that comes with flash storage. */
+        case BLE_GAP_EVT_AUTH_STATUS: {
+            /* Pairing complete.  If successful, persist the bond keys
+             * so we can reconnect without re-pairing. */
+            ble_gap_evt_auth_status_t *auth =
+                &evt->evt.gap_evt.params.auth_status;
+            if (auth->auth_status == BLE_GAP_SEC_STATUS_SUCCESS) {
+                bond_save(&own_enc_key, &peer_id_key);
+            }
             break;
+        }
 
-        case BLE_GAP_EVT_SEC_INFO_REQUEST:
+        case BLE_GAP_EVT_SEC_INFO_REQUEST: {
             /* Central is asking for stored bond keys (reconnection).
-             * We don't persist bonds yet, so reply with NULLs. */
-            sd_ble_gap_sec_info_reply(
-                evt->evt.gap_evt.conn_handle,
-                NULL, NULL, NULL);
+             * If we have a stored bond, return the encryption info;
+             * otherwise reply NULL to force a fresh pairing. */
+            const ble_gap_enc_info_t  *enc  = bond_enc_info();
+            const ble_gap_irk_t       *irk  = bond_peer_irk();
+            if (enc) {
+                sd_ble_gap_sec_info_reply(
+                    evt->evt.gap_evt.conn_handle,
+                    enc, irk, NULL);
+            } else {
+                sd_ble_gap_sec_info_reply(
+                    evt->evt.gap_evt.conn_handle,
+                    NULL, NULL, NULL);
+            }
             break;
+        }
 
         case BLE_GAP_EVT_CONN_SEC_UPDATE:
             /* Connection security level changed — nothing to do. */
