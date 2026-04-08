@@ -265,75 +265,6 @@ static void dis_init(void)
         hid_error_blink(12, err);
 }
 
-/* ---- Battery Service (expected by iOS/macOS for HID devices) ----
- *
- * Registers the Battery Service (UUID 0x180F) with a single Battery
- * Level characteristic (UUID 0x2A19).  The Bluetooth SIG defines
- * this as a 1-byte value, 0–100, representing percent charge.
- *
- * iOS and macOS expect HID peripherals to expose this service — it's
- * how the system shows the battery icon next to the device name in
- * Bluetooth settings.
- *
- * For now the level is hardcoded to 100%.  Task 8 will replace this
- * with real ADC readings from the Feather's LiPo voltage divider.
- */
-static void bas_init(void)
-{
-    uint32_t err;
-    uint16_t svc_handle;
-
-    /* Register the Battery Service as a primary service */
-    ble_uuid_t svc_uuid = {.uuid = 0x180F, .type = BLE_UUID_TYPE_BLE};
-    err = sd_ble_gatts_service_add(BLE_GATTS_SRVC_TYPE_PRIMARY,
-                                   &svc_uuid, &svc_handle);
-    if (err != NRF_SUCCESS)
-        hid_error_blink(13, err);
-
-    /* Battery Level characteristic (0x2A19).
-     * - Read: host can poll the current level at any time.
-     * - Notify: we can push updates when the level changes.
-     * Hardcoded to 100% for now. */
-    static uint8_t battery_level = 100;
-
-    ble_gatts_char_md_t char_md;
-    memset(&char_md, 0, sizeof(char_md));
-    char_md.char_props.read   = 1;
-    char_md.char_props.notify = 1;
-
-    /* CCCD for notifications — open access (no encryption needed
-     * just to subscribe to battery updates). */
-    ble_gatts_attr_md_t cccd_md;
-    memset(&cccd_md, 0, sizeof(cccd_md));
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cccd_md.read_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cccd_md.write_perm);
-    cccd_md.vloc = BLE_GATTS_VLOC_STACK;
-    char_md.p_cccd_md = &cccd_md;
-
-    /* Attribute: readable by anyone, not writable by the central */
-    ble_gatts_attr_md_t attr_md;
-    memset(&attr_md, 0, sizeof(attr_md));
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.read_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&attr_md.write_perm);
-    attr_md.vloc = BLE_GATTS_VLOC_STACK;
-
-    ble_uuid_t uuid = {.uuid = 0x2A19, .type = BLE_UUID_TYPE_BLE};
-
-    /* 1 byte, fixed length, value stored in SoftDevice RAM */
-    ble_gatts_attr_t attr_val = {
-        .p_uuid    = &uuid,
-        .p_attr_md = &attr_md,
-        .init_len  = 1,
-        .max_len   = 1,
-        .p_value   = &battery_level,
-    };
-
-    ble_gatts_char_handles_t handles;
-    err = sd_ble_gatts_characteristic_add(svc_handle, &char_md, &attr_val, &handles);
-    if (err != NRF_SUCCESS)
-        hid_error_blink(14, err);
-}
-
 /* ---- HID Service registration ---- */
 
 void hid_service_init(void)
@@ -343,8 +274,8 @@ void hid_service_init(void)
     /* Device Information Service must exist for HOGP compliance */
     dis_init();
 
-    /* Battery Service — iOS/macOS expect this for HID keyboards */
-    bas_init();
+    /* Battery Service is registered separately by battery_service_init()
+     * in battery.c — call it from main() before ble_stack_advertise(). */
 
     /* Register the HID Service (UUID 0x1812) */
     ble_uuid_t svc_uuid = {

@@ -39,6 +39,20 @@
 #define PIN_AIN6 30
 #define PIN_AIN7_BAT 31 /* battery voltage — do not use for general I/O */
 
+/* ---- Battery (EEMB LP103454-PCM-LD, 3.7V / 2000mAh LiPo) ----
+ * The Feather routes VBAT through a 2:1 voltage divider to AIN7.
+ * Divider numerator/denominator lets battery.c recover the true
+ * battery voltage from the ADC reading.  Adjust if your board
+ * uses different resistor values. */
+#define BAT_DIVIDER_NUM   2   /* Vbat = Vadc × (NUM / DEN) */
+#define BAT_DIVIDER_DEN   1
+
+/* LiPo voltage thresholds (millivolts) */
+#define BAT_MV_FULL       4200  /* fully charged */
+#define BAT_MV_NOMINAL    3700  /* nominal */
+#define BAT_MV_LOW        3300  /* low-battery warning threshold */
+#define BAT_MV_CUTOFF     3000  /* empty / PCM cutoff */
+
 /* ---- SPI ---- */
 #define PIN_SPI_CLK 12
 #define PIN_SPI_MOSI 13

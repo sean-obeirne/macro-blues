@@ -10,6 +10,7 @@
 #include "gpiote.h"
 #include "ble_stack.h"
 #include "hid_service.h"
+#include "battery.h"
 #include "keymap.h"
 
 int main(void)
@@ -42,11 +43,12 @@ int main(void)
 	 */
 	ble_stack_init();
 	hid_service_init();
+	battery_service_init();
 
 	/* All GATT services are registered — NOW start advertising.
-	 * This must come after hid_service_init() because adding GATT
-	 * attributes while advertising is active can silently stop the
-	 * SoftDevice's radio. */
+	 * This must come after hid_service_init() / battery_service_init()
+	 * because adding GATT attributes while advertising is active can
+	 * silently stop the SoftDevice's radio. */
 	ble_stack_advertise();
 
 	/* Diagnostic: 3 quick blue blinks = BLE + HID init OK */
@@ -67,6 +69,7 @@ int main(void)
 	 */
 	timer_init();
 	gpiote_init();
+	battery_init();
 
 	/* ---- Main loop ---- */
 	led_all_off();
@@ -74,6 +77,12 @@ int main(void)
 	int raw[NUM_KEYS];
 	int prev_pressed[NUM_KEYS];
 	memset(prev_pressed, 0, sizeof(prev_pressed));
+
+	/* Battery check counter.  Each main-loop idle sleep is
+	 * roughly 1 event period; we sample every ~3000 iterations
+	 * which works out to roughly every 30-60 seconds. */
+	int bat_counter = 0;
+	int bat_low_blink = 0;
 
 	/*
 	 * Simplified architecture: always scan keys + debounce on every
@@ -115,6 +124,24 @@ int main(void)
 			}
 			hid_service_send_report(mod, keys, count);
 			led_toggle(LED_RED);
+		}
+
+		/* ---- Periodic battery check ---- */
+		if (++bat_counter >= 3000)
+		{
+			bat_counter = 0;
+			battery_update();
+
+			/* Quick red blink if battery is low */
+			if (battery_low() && !bat_low_blink)
+			{
+				led_flash(LED_RED, 50);
+				bat_low_blink = 1;
+			}
+			else if (!battery_low())
+			{
+				bat_low_blink = 0;
+			}
 		}
 
 		if (key_any_pressed() || debounce_settling())

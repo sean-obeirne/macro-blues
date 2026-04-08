@@ -10,6 +10,7 @@
 
 #include "ble_stack.h"
 #include "hid_service.h"
+#include "battery.h"
 #include "bond.h"
 #include "led.h"
 
@@ -488,9 +489,10 @@ void ble_stack_process(void)
         case BLE_GATTS_EVT_WRITE:
         {
             /* Forward CCCD writes (and any other GATTS writes)
-             * to the HID service so it can track notification state. */
+             * to the HID and battery services for notification tracking. */
             ble_gatts_evt_write_t *w = &evt->evt.gatts_evt.params.write;
             hid_service_on_write(w->handle, w->data, w->len);
+            battery_on_write(w->handle, w->data, w->len);
             break;
         }
 
