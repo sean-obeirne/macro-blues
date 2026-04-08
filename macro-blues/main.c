@@ -16,9 +16,18 @@
  * This will be replaced by a proper keymap/macro engine in Task 7.
  */
 static const uint8_t keymap[NUM_KEYS] = {
-	HID_KEY_A, HID_KEY_B, HID_KEY_C, HID_KEY_D,
-	HID_KEY_E, HID_KEY_F, HID_KEY_G, HID_KEY_H,
-	HID_KEY_I, HID_KEY_J, HID_KEY_K, HID_KEY_L,
+	HID_KEY_A,
+	HID_KEY_B,
+	HID_KEY_C,
+	HID_KEY_D,
+	HID_KEY_E,
+	HID_KEY_F,
+	HID_KEY_G,
+	HID_KEY_H,
+	HID_KEY_I,
+	HID_KEY_J,
+	HID_KEY_K,
+	HID_KEY_L,
 };
 
 int main(void)
@@ -31,11 +40,14 @@ int main(void)
 
 	/* Diagnostic: 3 quick red blinks to prove we're alive.
 	 * If you see these, the bootloader jumped to our code OK. */
-	for (int i = 0; i < 3; i++) {
+	for (int i = 0; i < 3; i++)
+	{
 		led_on(LED_RED);
-		for (volatile int d = 0; d < 400000; d++) ;
+		for (volatile int d = 0; d < 400000; d++)
+			;
 		led_off(LED_RED);
-		for (volatile int d = 0; d < 400000; d++) ;
+		for (volatile int d = 0; d < 400000; d++)
+			;
 	}
 
 	key_init();
@@ -49,12 +61,21 @@ int main(void)
 	ble_stack_init();
 	hid_service_init();
 
+	/* All GATT services are registered — NOW start advertising.
+	 * This must come after hid_service_init() because adding GATT
+	 * attributes while advertising is active can silently stop the
+	 * SoftDevice's radio. */
+	ble_stack_advertise();
+
 	/* Diagnostic: 3 quick blue blinks = BLE + HID init OK */
-	for (int i = 0; i < 3; i++) {
+	for (int i = 0; i < 3; i++)
+	{
 		led_on(LED_BLUE);
-		for (volatile int d = 0; d < 400000; d++) ;
+		for (volatile int d = 0; d < 400000; d++)
+			;
 		led_off(LED_BLUE);
-		for (volatile int d = 0; d < 400000; d++) ;
+		for (volatile int d = 0; d < 400000; d++)
+			;
 	}
 
 	/*
@@ -90,17 +111,21 @@ int main(void)
 
 		/* Check if any key changed state (fell or rose) */
 		int changed = 0;
-		for (int i = 0; i < NUM_KEYS; i++) {
+		for (int i = 0; i < NUM_KEYS; i++)
+		{
 			if (debounce_fell(i) || debounce_rose(i))
 				changed = 1;
 		}
 
-		if (changed && ble_stack_connected()) {
+		if (changed && ble_stack_connected())
+		{
 			/* Build a report with all currently pressed keycodes */
 			uint8_t keys[6];
 			uint8_t count = 0;
-			for (int i = 0; i < NUM_KEYS && count < 6; i++) {
-				if (debounce_state(i)) {
+			for (int i = 0; i < NUM_KEYS && count < 6; i++)
+			{
+				if (debounce_state(i))
+				{
 					keys[count++] = keymap[i];
 				}
 			}
@@ -108,10 +133,13 @@ int main(void)
 			led_toggle(LED_RED);
 		}
 
-		if (key_any_pressed() || debounce_settling()) {
+		if (key_any_pressed() || debounce_settling())
+		{
 			/* Keys are active — poll at ~10 ms for debounce. */
 			wait_ms(10);
-		} else {
+		}
+		else
+		{
 			/* Idle — arm GPIOTE and sleep until a key press
 			 * or BLE event wakes the CPU. */
 			gpiote_arm();

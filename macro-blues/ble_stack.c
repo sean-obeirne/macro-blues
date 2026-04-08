@@ -58,9 +58,9 @@ static uint8_t srp_data_buf[31];
 /* Pairing keyset — file-scope so the buffers survive across BLE events.
  * Filled during SEC_PARAMS_REQUEST, read during AUTH_STATUS to save bond. */
 static ble_gap_enc_key_t own_enc_key;
-static ble_gap_id_key_t  own_id_key;
+static ble_gap_id_key_t own_id_key;
 static ble_gap_enc_key_t peer_enc_key;
-static ble_gap_id_key_t  peer_id_key;
+static ble_gap_id_key_t peer_id_key;
 
 /* ---- SoftDevice fault handler ---- */
 
@@ -89,11 +89,14 @@ static uint8_t build_adv_data(uint8_t *buf)
     /* Complete list of 16-bit service UUIDs.
      * Apple's Bluetooth stack needs these in the PRIMARY packet
      * (not scan response) to recognize the device as a keyboard. */
-    buf[pos++] = 7;   /* length: 1 + 3×2 */
+    buf[pos++] = 7; /* length: 1 + 3×2 */
     buf[pos++] = BLE_GAP_AD_TYPE_16BIT_SERVICE_UUID_COMPLETE;
-    buf[pos++] = 0x12; buf[pos++] = 0x18; /* HID Service  0x1812 */
-    buf[pos++] = 0x0F; buf[pos++] = 0x18; /* Battery Svc  0x180F */
-    buf[pos++] = 0x0A; buf[pos++] = 0x18; /* Device Info   0x180A */
+    buf[pos++] = 0x12;
+    buf[pos++] = 0x18; /* HID Service  0x1812 */
+    buf[pos++] = 0x0F;
+    buf[pos++] = 0x18; /* Battery Svc  0x180F */
+    buf[pos++] = 0x0A;
+    buf[pos++] = 0x18; /* Device Info   0x180A */
 
     /* Appearance: HID Keyboard */
     buf[pos++] = 3;
@@ -292,16 +295,23 @@ void ble_stack_init(void)
     bond_init();
     advertising_init();
 
-    /* Start advertising immediately */
-    uint32_t err = sd_ble_gap_adv_start(adv_handle, BLE_CONN_CFG_TAG_DEFAULT);
-    if (err != NRF_SUCCESS)
-        error_blink(5, err);
+    /* Do NOT start advertising here.  The GATT attribute table must be
+     * fully built (HID service, battery service, DIS) before the first
+     * call to sd_ble_gap_adv_start().  Modifying the GATT table after
+     * advertising has started can cause the SoftDevice to silently stop
+     * advertising, with no error and no event — the radio just goes
+     * quiet.  main() calls ble_stack_advertise() once all services are
+     * registered. */
 }
 
 void ble_stack_advertise(void)
 {
     if (conn_handle == BLE_CONN_HANDLE_INVALID)
-        sd_ble_gap_adv_start(adv_handle, BLE_CONN_CFG_TAG_DEFAULT);
+    {
+        uint32_t err = sd_ble_gap_adv_start(adv_handle, BLE_CONN_CFG_TAG_DEFAULT);
+        if (err != NRF_SUCCESS)
+            error_blink(5, err);
+    }
 }
 
 void ble_stack_wait(void)
@@ -322,7 +332,7 @@ uint16_t ble_stack_conn_handle(void)
 void ble_stack_process(void)
 {
     __attribute__((aligned(4)))
-    uint8_t evt_buf[256];
+    uint8_t evt_buf[512];
     uint16_t evt_len;
 
     while (1)
@@ -343,64 +353,55 @@ void ble_stack_process(void)
             conn_handle = evt->evt.gap_evt.conn_handle;
             led_on(LED_BLUE);
 
-            /* Kick off security immediately.  Apple devices often wait
-             * for the peripheral to initiate.  If we have a bond, the
-             * SD will try to re-encrypt.  If not, this triggers pairing.
+            /* Do NOT initiate security here.  BlueZ (Linux) does not
+             * handle a Slave Security Request arriving before it has
+             * started GATT service discovery — it collides with its
+             * own pairing flow and drops the connection.
+             *
+             * Instead, let the central drive pairing.  When it tries
+             * to read our encrypted HID characteristics, the SD will
+             * return "Insufficient Authentication" automatically,
+             * which prompts the central to start pairing on its own.
+             *
+             * Apple (iOS/macOS) also handles this path correctly —
+             * they will initiate pairing when they hit the auth wall.
              */
-            {
-                ble_gap_sec_params_t sec_params;
-                memset(&sec_params, 0, sizeof(sec_params));
-                sec_params.bond         = 1;
-                sec_params.mitm         = 0;
-                sec_params.lesc         = 0;
-                sec_params.keypress     = 0;
-                sec_params.io_caps      = BLE_GAP_IO_CAPS_NONE;
-                sec_params.oob          = 0;
-                sec_params.min_key_size = 7;
-                sec_params.max_key_size = 16;
-                sec_params.kdist_own.enc  = 1;
-                sec_params.kdist_own.id   = 1;
-                sec_params.kdist_peer.enc = 1;
-                sec_params.kdist_peer.id  = 1;
-
-                sd_ble_gap_authenticate(
-                    evt->evt.gap_evt.conn_handle, &sec_params);
-            }
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
             conn_handle = BLE_CONN_HANDLE_INVALID;
             led_off(LED_BLUE);
             /* Restart advertising so the device is discoverable again */
-            sd_ble_gap_adv_start(adv_handle, BLE_CONN_CFG_TAG_DEFAULT);
+            ble_stack_advertise();
             break;
 
             /* ---- Security (Just Works pairing for HID) ---- */
 
-        case BLE_GAP_EVT_SEC_PARAMS_REQUEST: {
+        case BLE_GAP_EVT_SEC_PARAMS_REQUEST:
+        {
             /* Accept pairing with Just Works.  Provide keyset buffers
              * so the SD can store the exchanged keys. */
             ble_gap_sec_keyset_t keyset;
             memset(&keyset, 0, sizeof(keyset));
-            keyset.keys_own.p_enc_key  = &own_enc_key;
-            keyset.keys_own.p_id_key   = &own_id_key;
+            keyset.keys_own.p_enc_key = &own_enc_key;
+            keyset.keys_own.p_id_key = &own_id_key;
             keyset.keys_peer.p_enc_key = &peer_enc_key;
-            keyset.keys_peer.p_id_key  = &peer_id_key;
+            keyset.keys_peer.p_id_key = &peer_id_key;
 
             ble_gap_sec_params_t sec_params;
             memset(&sec_params, 0, sizeof(sec_params));
-            sec_params.bond         = 1;
-            sec_params.mitm         = 0;
-            sec_params.lesc         = 0;
-            sec_params.keypress     = 0;
-            sec_params.io_caps      = BLE_GAP_IO_CAPS_NONE;
-            sec_params.oob          = 0;
+            sec_params.bond = 1;
+            sec_params.mitm = 0;
+            sec_params.lesc = 0;
+            sec_params.keypress = 0;
+            sec_params.io_caps = BLE_GAP_IO_CAPS_NONE;
+            sec_params.oob = 0;
             sec_params.min_key_size = 7;
             sec_params.max_key_size = 16;
-            sec_params.kdist_own.enc  = 1;
-            sec_params.kdist_own.id   = 1;
+            sec_params.kdist_own.enc = 1;
+            sec_params.kdist_own.id = 1;
             sec_params.kdist_peer.enc = 1;
-            sec_params.kdist_peer.id  = 1;
+            sec_params.kdist_peer.id = 1;
 
             sd_ble_gap_sec_params_reply(
                 evt->evt.gap_evt.conn_handle,
@@ -409,28 +410,34 @@ void ble_stack_process(void)
             break;
         }
 
-        case BLE_GAP_EVT_AUTH_STATUS: {
+        case BLE_GAP_EVT_AUTH_STATUS:
+        {
             /* Pairing complete.  If successful, persist the bond keys
              * so we can reconnect without re-pairing. */
             ble_gap_evt_auth_status_t *auth =
                 &evt->evt.gap_evt.params.auth_status;
-            if (auth->auth_status == BLE_GAP_SEC_STATUS_SUCCESS) {
+            if (auth->auth_status == BLE_GAP_SEC_STATUS_SUCCESS)
+            {
                 bond_save(&own_enc_key, &peer_id_key);
             }
             break;
         }
 
-        case BLE_GAP_EVT_SEC_INFO_REQUEST: {
+        case BLE_GAP_EVT_SEC_INFO_REQUEST:
+        {
             /* Central is asking for stored bond keys (reconnection).
              * If we have a stored bond, return the encryption info;
              * otherwise reply NULL to force a fresh pairing. */
-            const ble_gap_enc_info_t  *enc  = bond_enc_info();
-            const ble_gap_irk_t       *irk  = bond_peer_irk();
-            if (enc) {
+            const ble_gap_enc_info_t *enc = bond_enc_info();
+            const ble_gap_irk_t *irk = bond_peer_irk();
+            if (enc)
+            {
                 sd_ble_gap_sec_info_reply(
                     evt->evt.gap_evt.conn_handle,
                     enc, irk, NULL);
-            } else {
+            }
+            else
+            {
                 sd_ble_gap_sec_info_reply(
                     evt->evt.gap_evt.conn_handle,
                     NULL, NULL, NULL);
@@ -478,7 +485,8 @@ void ble_stack_process(void)
                 evt->evt.gatts_evt.conn_handle, NULL, 0, 0);
             break;
 
-        case BLE_GATTS_EVT_WRITE: {
+        case BLE_GATTS_EVT_WRITE:
+        {
             /* Forward CCCD writes (and any other GATTS writes)
              * to the HID service so it can track notification state. */
             ble_gatts_evt_write_t *w = &evt->evt.gatts_evt.params.write;
