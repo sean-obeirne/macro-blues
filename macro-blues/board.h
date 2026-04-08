@@ -14,20 +14,20 @@
 
 /* ---- Key switch inputs (active-low, internal pull-up) ---- */
 /* 12-key macropad: each switch wired directly from GPIO to GND */
-#define PIN_KEY1  2   /* A0  — left header  */
-#define PIN_KEY2  3   /* A1  — left header  */
-#define PIN_KEY3  4   /* A2  — left header  */
-#define PIN_KEY4  5   /* A3  — left header  */
-#define PIN_KEY5  28  /* A4  — left header  */
-#define PIN_KEY6  29  /* A5  — left header  */
-#define PIN_KEY7  30  /*     — right header */
-#define PIN_KEY8  7   /*     — right header */
-#define PIN_KEY9  11  /*     — right header */
-#define PIN_KEY10 27  /*     — right header */
-#define PIN_KEY11 15  /*     — right header */
-#define PIN_KEY12 16  /*     — right header */
+#define PIN_KEY1 2   /* A0  — left header  */
+#define PIN_KEY2 3   /* A1  — left header  */
+#define PIN_KEY3 4   /* A2  — left header  */
+#define PIN_KEY4 5   /* A3  — left header  */
+#define PIN_KEY5 28  /* A4  — left header  */
+#define PIN_KEY6 29  /* A5  — left header  */
+#define PIN_KEY7 30  /*     — right header */
+#define PIN_KEY8 7   /*     — right header */
+#define PIN_KEY9 11  /*     — right header */
+#define PIN_KEY10 27 /*     — right header */
+#define PIN_KEY11 15 /*     — right header */
+#define PIN_KEY12 16 /*     — right header */
 
-#define NUM_KEYS  12
+#define NUM_KEYS 12
 
 /* ---- Analog inputs ---- */
 #define PIN_AIN0 2
@@ -44,14 +44,14 @@
  * Divider numerator/denominator lets battery.c recover the true
  * battery voltage from the ADC reading.  Adjust if your board
  * uses different resistor values. */
-#define BAT_DIVIDER_NUM   2   /* Vbat = Vadc × (NUM / DEN) */
-#define BAT_DIVIDER_DEN   1
+#define BAT_DIVIDER_NUM 2 /* Vbat = Vadc × (NUM / DEN) */
+#define BAT_DIVIDER_DEN 1
 
 /* LiPo voltage thresholds (millivolts) */
-#define BAT_MV_FULL       4200  /* fully charged */
-#define BAT_MV_NOMINAL    3700  /* nominal */
-#define BAT_MV_LOW        3300  /* low-battery warning threshold */
-#define BAT_MV_CUTOFF     3000  /* empty / PCM cutoff */
+#define BAT_MV_FULL 4200    /* fully charged */
+#define BAT_MV_NOMINAL 3700 /* nominal */
+#define BAT_MV_LOW 3300     /* low-battery warning threshold */
+#define BAT_MV_CUTOFF 3000  /* empty / PCM cutoff */
 
 /* ---- SPI ---- */
 #define PIN_SPI_CLK 12

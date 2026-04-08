@@ -21,15 +21,15 @@
 #define RTC1_BASE 0x40011000
 
 #define RTC1_TASKS_START (*(volatile uint32_t *)(RTC1_BASE + 0x000))
-#define RTC1_TASKS_STOP  (*(volatile uint32_t *)(RTC1_BASE + 0x004))
+#define RTC1_TASKS_STOP (*(volatile uint32_t *)(RTC1_BASE + 0x004))
 #define RTC1_TASKS_CLEAR (*(volatile uint32_t *)(RTC1_BASE + 0x008))
 
 #define RTC1_EVENTS_TICK (*(volatile uint32_t *)(RTC1_BASE + 0x100))
 
-#define RTC1_INTENSET  (*(volatile uint32_t *)(RTC1_BASE + 0x304))
-#define RTC1_INTENCLR  (*(volatile uint32_t *)(RTC1_BASE + 0x308))
-#define RTC1_EVTENSET  (*(volatile uint32_t *)(RTC1_BASE + 0x344))
-#define RTC1_COUNTER   (*(volatile uint32_t *)(RTC1_BASE + 0x504))
+#define RTC1_INTENSET (*(volatile uint32_t *)(RTC1_BASE + 0x304))
+#define RTC1_INTENCLR (*(volatile uint32_t *)(RTC1_BASE + 0x308))
+#define RTC1_EVTENSET (*(volatile uint32_t *)(RTC1_BASE + 0x344))
+#define RTC1_COUNTER (*(volatile uint32_t *)(RTC1_BASE + 0x504))
 #define RTC1_PRESCALER (*(volatile uint32_t *)(RTC1_BASE + 0x508))
 
 /* ---- GPIO ---- */
@@ -56,19 +56,19 @@
 #define GPIOTE_BASE 0x40006000
 
 #define GPIOTE_EVENTS_PORT (*(volatile uint32_t *)(GPIOTE_BASE + 0x17C))
-#define GPIOTE_INTENSET    (*(volatile uint32_t *)(GPIOTE_BASE + 0x304))
-#define GPIOTE_INTENCLR    (*(volatile uint32_t *)(GPIOTE_BASE + 0x308))
+#define GPIOTE_INTENSET (*(volatile uint32_t *)(GPIOTE_BASE + 0x304))
+#define GPIOTE_INTENCLR (*(volatile uint32_t *)(GPIOTE_BASE + 0x308))
 
-#define GPIOTE_IRQN 6  /* NVIC IRQ number for GPIOTE */
+#define GPIOTE_IRQN 6 /* NVIC IRQ number for GPIOTE */
 
 /* GPIO PORT event helpers (used with GPIOTE PORT event) */
-#define GPIO_LATCH       (*(volatile uint32_t *)(GPIO_BASE + 0x520))
-#define GPIO_DETECTMODE  (*(volatile uint32_t *)(GPIO_BASE + 0x524))
+#define GPIO_LATCH (*(volatile uint32_t *)(GPIO_BASE + 0x520))
+#define GPIO_DETECTMODE (*(volatile uint32_t *)(GPIO_BASE + 0x524))
 
 /* ---- NVIC (Nested Vectored Interrupt Controller) ---- */
-#define NVIC_ISER0 (*(volatile uint32_t *)0xE000E100)  /* Interrupt Set-Enable  */
-#define NVIC_ICER0 (*(volatile uint32_t *)0xE000E180)  /* Interrupt Clear-Enable */
-#define NVIC_ICPR0 (*(volatile uint32_t *)0xE000E280)  /* Interrupt Clear-Pending */
+#define NVIC_ISER0 (*(volatile uint32_t *)0xE000E100) /* Interrupt Set-Enable  */
+#define NVIC_ICER0 (*(volatile uint32_t *)0xE000E180) /* Interrupt Clear-Enable */
+#define NVIC_ICPR0 (*(volatile uint32_t *)0xE000E280) /* Interrupt Clear-Pending */
 
 /* Set IRQ priority.  Cortex-M4 nRF52 implements 3 priority bits (0-7),
  * stored in the top 3 bits of an 8-bit register.  SoftDevice reserves
@@ -79,43 +79,43 @@
 /* ---- SAADC (Successive Approximation ADC) ---- */
 #define SAADC_BASE 0x40007000
 
-#define SAADC_TASKS_START          (*(volatile uint32_t *)(SAADC_BASE + 0x000))
-#define SAADC_TASKS_SAMPLE         (*(volatile uint32_t *)(SAADC_BASE + 0x004))
-#define SAADC_TASKS_STOP           (*(volatile uint32_t *)(SAADC_BASE + 0x008))
+#define SAADC_TASKS_START (*(volatile uint32_t *)(SAADC_BASE + 0x000))
+#define SAADC_TASKS_SAMPLE (*(volatile uint32_t *)(SAADC_BASE + 0x004))
+#define SAADC_TASKS_STOP (*(volatile uint32_t *)(SAADC_BASE + 0x008))
 #define SAADC_TASKS_CALIBRATEOFFSET (*(volatile uint32_t *)(SAADC_BASE + 0x00C))
 
-#define SAADC_EVENTS_STARTED       (*(volatile uint32_t *)(SAADC_BASE + 0x100))
-#define SAADC_EVENTS_END           (*(volatile uint32_t *)(SAADC_BASE + 0x104))
-#define SAADC_EVENTS_DONE          (*(volatile uint32_t *)(SAADC_BASE + 0x108))
+#define SAADC_EVENTS_STARTED (*(volatile uint32_t *)(SAADC_BASE + 0x100))
+#define SAADC_EVENTS_END (*(volatile uint32_t *)(SAADC_BASE + 0x104))
+#define SAADC_EVENTS_DONE (*(volatile uint32_t *)(SAADC_BASE + 0x108))
 #define SAADC_EVENTS_CALIBRATEDONE (*(volatile uint32_t *)(SAADC_BASE + 0x110))
-#define SAADC_EVENTS_STOPPED       (*(volatile uint32_t *)(SAADC_BASE + 0x114))
+#define SAADC_EVENTS_STOPPED (*(volatile uint32_t *)(SAADC_BASE + 0x114))
 
-#define SAADC_ENABLE               (*(volatile uint32_t *)(SAADC_BASE + 0x500))
-#define SAADC_CH0_PSELP            (*(volatile uint32_t *)(SAADC_BASE + 0x510))
-#define SAADC_CH0_PSELN            (*(volatile uint32_t *)(SAADC_BASE + 0x514))
-#define SAADC_CH0_CONFIG           (*(volatile uint32_t *)(SAADC_BASE + 0x518))
-#define SAADC_RESOLUTION           (*(volatile uint32_t *)(SAADC_BASE + 0x5F0))
-#define SAADC_RESULT_PTR           (*(volatile uint32_t *)(SAADC_BASE + 0x62C))
-#define SAADC_RESULT_MAXCNT        (*(volatile uint32_t *)(SAADC_BASE + 0x630))
-#define SAADC_RESULT_AMOUNT        (*(volatile uint32_t *)(SAADC_BASE + 0x634))
+#define SAADC_ENABLE (*(volatile uint32_t *)(SAADC_BASE + 0x500))
+#define SAADC_CH0_PSELP (*(volatile uint32_t *)(SAADC_BASE + 0x510))
+#define SAADC_CH0_PSELN (*(volatile uint32_t *)(SAADC_BASE + 0x514))
+#define SAADC_CH0_CONFIG (*(volatile uint32_t *)(SAADC_BASE + 0x518))
+#define SAADC_RESOLUTION (*(volatile uint32_t *)(SAADC_BASE + 0x5F0))
+#define SAADC_RESULT_PTR (*(volatile uint32_t *)(SAADC_BASE + 0x62C))
+#define SAADC_RESULT_MAXCNT (*(volatile uint32_t *)(SAADC_BASE + 0x630))
+#define SAADC_RESULT_AMOUNT (*(volatile uint32_t *)(SAADC_BASE + 0x634))
 
 /* SAADC channel positive input select (PSELP) values */
-#define SAADC_PSEL_NC      0
-#define SAADC_PSEL_AIN0    1
-#define SAADC_PSEL_AIN1    2
-#define SAADC_PSEL_AIN2    3
-#define SAADC_PSEL_AIN3    4
-#define SAADC_PSEL_AIN4    5
-#define SAADC_PSEL_AIN5    6
-#define SAADC_PSEL_AIN6    7
-#define SAADC_PSEL_AIN7    8
-#define SAADC_PSEL_VDD     9
+#define SAADC_PSEL_NC 0
+#define SAADC_PSEL_AIN0 1
+#define SAADC_PSEL_AIN1 2
+#define SAADC_PSEL_AIN2 3
+#define SAADC_PSEL_AIN3 4
+#define SAADC_PSEL_AIN4 5
+#define SAADC_PSEL_AIN5 6
+#define SAADC_PSEL_AIN6 7
+#define SAADC_PSEL_AIN7 8
+#define SAADC_PSEL_VDD 9
 
 /* SAADC_RESOLUTION values */
-#define SAADC_RES_8BIT   0
-#define SAADC_RES_10BIT  1
-#define SAADC_RES_12BIT  2
-#define SAADC_RES_14BIT  3
+#define SAADC_RES_8BIT 0
+#define SAADC_RES_10BIT 1
+#define SAADC_RES_12BIT 2
+#define SAADC_RES_14BIT 3
 
 /* SAADC CH[n].CONFIG bit fields:
  *   RESP   [1:0]   Positive resistor: 00=Bypass
@@ -126,13 +126,13 @@
  *   MODE   [20]    0=Single-ended, 1=Differential
  *   BURST  [24]    0=Disabled, 1=Enabled
  */
-#define SAADC_CONFIG_GAIN_1_6     (0 << 8)
-#define SAADC_CONFIG_GAIN_1_5     (1 << 8)
-#define SAADC_CONFIG_GAIN_1_4     (2 << 8)
-#define SAADC_CONFIG_REFSEL_INT   (0 << 12)  /* Internal 0.6V */
-#define SAADC_CONFIG_REFSEL_VDD4  (1 << 12)  /* VDD/4        */
-#define SAADC_CONFIG_TACQ_10US    (2 << 16)
-#define SAADC_CONFIG_TACQ_40US    (5 << 16)
-#define SAADC_CONFIG_MODE_SE      (0 << 20)  /* Single-ended */
+#define SAADC_CONFIG_GAIN_1_6 (0 << 8)
+#define SAADC_CONFIG_GAIN_1_5 (1 << 8)
+#define SAADC_CONFIG_GAIN_1_4 (2 << 8)
+#define SAADC_CONFIG_REFSEL_INT (0 << 12)  /* Internal 0.6V */
+#define SAADC_CONFIG_REFSEL_VDD4 (1 << 12) /* VDD/4        */
+#define SAADC_CONFIG_TACQ_10US (2 << 16)
+#define SAADC_CONFIG_TACQ_40US (5 << 16)
+#define SAADC_CONFIG_MODE_SE (0 << 20) /* Single-ended */
 
 #endif /* NRF52832_H */
