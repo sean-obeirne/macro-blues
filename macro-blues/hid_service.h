@@ -111,4 +111,7 @@ void hid_service_on_write(uint16_t handle, const uint8_t *data, uint16_t len);
 #define HID_MOD_RALT    0x40
 #define HID_MOD_RGUI    0x80
 
+/* Composite modifier combos */
+#define HID_MOD_HYPER   (HID_MOD_LSHIFT | HID_MOD_LCTRL | HID_MOD_LALT | HID_MOD_LGUI)
+
 #endif /* HID_SERVICE_H */

@@ -10,25 +10,7 @@
 #include "gpiote.h"
 #include "ble_stack.h"
 #include "hid_service.h"
-
-/*
- * Temporary keymap: KEY1..KEY12 → a..l
- * This will be replaced by a proper keymap/macro engine in Task 7.
- */
-static const uint8_t keymap[NUM_KEYS] = {
-	HID_KEY_A,
-	HID_KEY_B,
-	HID_KEY_C,
-	HID_KEY_D,
-	HID_KEY_E,
-	HID_KEY_F,
-	HID_KEY_G,
-	HID_KEY_H,
-	HID_KEY_I,
-	HID_KEY_J,
-	HID_KEY_K,
-	HID_KEY_L,
-};
+#include "keymap.h"
 
 int main(void)
 {
@@ -119,17 +101,19 @@ int main(void)
 
 		if (changed && ble_stack_connected())
 		{
-			/* Build a report with all currently pressed keycodes */
+				/* Build a report with all currently pressed keycodes */
 			uint8_t keys[6];
+			uint8_t mod = 0;
 			uint8_t count = 0;
 			for (int i = 0; i < NUM_KEYS && count < 6; i++)
 			{
 				if (debounce_state(i))
 				{
+					mod |= keymod[i];
 					keys[count++] = keymap[i];
 				}
 			}
-			hid_service_send_report(0, keys, count);
+			hid_service_send_report(mod, keys, count);
 			led_toggle(LED_RED);
 		}
 
