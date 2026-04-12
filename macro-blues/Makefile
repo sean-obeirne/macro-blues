@@ -10,10 +10,17 @@ LD      = arm-none-eabi-gcc
 BUILD   = build
 TARGET  = $(BUILD)/macro-blues
 
-SRCS = startup.c main.c timer.c gpio.c led.c keyswitch.c debounce.c gpiote.c ble_stack.c hid_service.c bond.c keymap.c battery.c
+SRCS = hw/startup.c main.c drivers/timer.c drivers/gpio.c drivers/led.c \
+       input/keyswitch.c input/debounce.c drivers/gpiote.c \
+       ble/ble_stack.c ble/hid_service.c ble/bond.c \
+       input/keymap.c ble/battery.c
 
 INCLUDES = \
 	-I. \
+	-Ihw \
+	-Ible \
+	-Iinput \
+	-Idrivers \
 	-I$(SDK)/components/softdevice/s132/headers \
 	-I$(SDK)/components/softdevice/s132/headers/nrf52 \
 	-I$(SDK)/components/toolchain/cmsis/include \
@@ -39,7 +46,7 @@ LDFLAGS = \
 	-mthumb \
 	-mfpu=fpv4-sp-d16 \
 	-mfloat-abi=hard \
-	-T nrf52832.ld \
+	-T hw/nrf52832.ld \
 	-Wl,--gc-sections \
 	-Wl,-Map=$(TARGET).map \
 	--specs=nosys.specs \
@@ -49,10 +56,8 @@ OBJS = $(patsubst %.c, $(BUILD)/%.o, $(SRCS))
 
 all: $(TARGET).hex
 
-$(BUILD):
-	mkdir -p $(BUILD)
-
-$(BUILD)/%.o: %.c | $(BUILD)
+$(BUILD)/%.o: %.c
+	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(TARGET).elf: $(OBJS)
