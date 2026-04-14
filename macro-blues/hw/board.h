@@ -64,6 +64,11 @@
 #define PIN_UART_AUX1 16
 #define PIN_UART_AUX2 15
 
+/* ---- Rotary encoder (on A0/A1/A2) ---- */
+#define PIN_ENC_BTN  PIN_KEY1  /* A0 — push button  */
+#define PIN_ENC_A    PIN_KEY2  /* A1 — quadrature A */
+#define PIN_ENC_B    PIN_KEY3  /* A2 — quadrature B */
+
 /* ---- I2C ---- */
 #define PIN_I2C_SCL 26
 #define PIN_I2C_SDA 25

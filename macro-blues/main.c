@@ -14,6 +14,7 @@
 #include "keymap.h"
 #include "i2c.h"
 #include "ssd1306.h"
+#include "encoder.h"
 
 int main(void)
 {
@@ -42,6 +43,7 @@ int main(void)
 
 	key_init();
 	debounce_init();
+	encoder_init();
 
 	/*
 	 * ---- Phase 2: SoftDevice + BLE ----
@@ -119,9 +121,14 @@ int main(void)
 		if (debounce_fell(0))
 			ssd1306_display_toggle();
 
+		/* Rotary encoder — scroll display vertically */
+		int enc = encoder_poll();
+		if (enc)
+			ssd1306_scroll(enc);
+
 		if (changed && ble_stack_connected())
 		{
-				/* Build a report with all currently pressed keycodes */
+			/* Build a report with all currently pressed keycodes */
 			uint8_t keys[6];
 			uint8_t mod = 0;
 			uint8_t count = 0;

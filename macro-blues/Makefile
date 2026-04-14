@@ -12,7 +12,7 @@ TARGET  = $(BUILD)/macro-blues
 
 SRCS = hw/startup.c main.c drivers/timer.c drivers/gpio.c drivers/led.c \
        drivers/i2c.c drivers/ssd1306.c \
-       input/keyswitch.c input/debounce.c drivers/gpiote.c \
+       input/keyswitch.c input/debounce.c input/encoder.c drivers/gpiote.c \
        ble/ble_stack.c ble/hid_service.c ble/bond.c \
        input/keymap.c ble/battery.c
 

@@ -3,6 +3,7 @@
 #include "keyswitch.h"
 #include "gpiote.h"
 #include "ble_stack.h"
+#include "encoder.h"
 
 /*
  * gpiote.c — GPIOTE PORT event driver
@@ -115,6 +116,18 @@ int gpiote_event_fired(void)
  */
 void GPIOTE_IRQHandler(void)
 {
+	/* Encoder channels — service first for lowest latency */
+	if (GPIOTE_EVENTS_IN(0))
+	{
+		GPIOTE_EVENTS_IN(0) = 0;
+		encoder_isr_update();
+	}
+	if (GPIOTE_EVENTS_IN(1))
+	{
+		GPIOTE_EVENTS_IN(1) = 0;
+		encoder_isr_update();
+	}
+
 	if (GPIOTE_EVENTS_PORT) {
 		GPIOTE_EVENTS_PORT = 0;
 		(void)GPIOTE_EVENTS_PORT;   /* read-back barrier */

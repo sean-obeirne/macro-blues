@@ -55,11 +55,20 @@
 /* ---- GPIOTE ---- */
 #define GPIOTE_BASE 0x40006000
 
+#define GPIOTE_EVENTS_IN(n) (*(volatile uint32_t *)(GPIOTE_BASE + 0x100 + ((n) * 4)))
 #define GPIOTE_EVENTS_PORT (*(volatile uint32_t *)(GPIOTE_BASE + 0x17C))
 #define GPIOTE_INTENSET (*(volatile uint32_t *)(GPIOTE_BASE + 0x304))
 #define GPIOTE_INTENCLR (*(volatile uint32_t *)(GPIOTE_BASE + 0x308))
+#define GPIOTE_CONFIG(n) (*(volatile uint32_t *)(GPIOTE_BASE + 0x510 + ((n) * 4)))
 
 #define GPIOTE_IRQN 6 /* NVIC IRQ number for GPIOTE */
+
+/* GPIOTE_CONFIG bit fields:
+ *   MODE   [1:0]   0=Disabled, 1=Event, 3=Task
+ *   PSEL   [12:8]  Pin number
+ *   POLARITY [17:16] 0=None, 1=LoToHi, 2=HiToLo, 3=Toggle */
+#define GPIOTE_CONFIG_MODE_EVENT  1
+#define GPIOTE_CONFIG_POL_TOGGLE  (3 << 16)
 
 /* GPIO PORT event helpers (used with GPIOTE PORT event) */
 #define GPIO_LATCH (*(volatile uint32_t *)(GPIO_BASE + 0x520))
