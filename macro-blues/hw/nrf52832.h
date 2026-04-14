@@ -135,4 +135,44 @@
 #define SAADC_CONFIG_TACQ_40US (5 << 16)
 #define SAADC_CONFIG_MODE_SE (0 << 20) /* Single-ended */
 
+/* ---- TWIM0 (I2C Master with EasyDMA) ----
+ * Shares peripheral ID with SPIM0/TWI0 — only one may be enabled.
+ * EasyDMA source/dest must be in Data RAM (not flash). */
+#define TWIM0_BASE 0x40003000
+
+#define TWIM0_TASKS_STARTRX    (*(volatile uint32_t *)(TWIM0_BASE + 0x000))
+#define TWIM0_TASKS_STARTTX    (*(volatile uint32_t *)(TWIM0_BASE + 0x008))
+#define TWIM0_TASKS_STOP       (*(volatile uint32_t *)(TWIM0_BASE + 0x014))
+#define TWIM0_TASKS_SUSPEND    (*(volatile uint32_t *)(TWIM0_BASE + 0x01C))
+#define TWIM0_TASKS_RESUME     (*(volatile uint32_t *)(TWIM0_BASE + 0x020))
+
+#define TWIM0_EVENTS_STOPPED   (*(volatile uint32_t *)(TWIM0_BASE + 0x104))
+#define TWIM0_EVENTS_ERROR     (*(volatile uint32_t *)(TWIM0_BASE + 0x124))
+#define TWIM0_EVENTS_LASTTX    (*(volatile uint32_t *)(TWIM0_BASE + 0x160))
+
+#define TWIM0_SHORTS           (*(volatile uint32_t *)(TWIM0_BASE + 0x200))
+#define TWIM0_ERRORSRC         (*(volatile uint32_t *)(TWIM0_BASE + 0x4C4))
+
+#define TWIM0_ENABLE           (*(volatile uint32_t *)(TWIM0_BASE + 0x500))
+#define TWIM0_PSEL_SCL         (*(volatile uint32_t *)(TWIM0_BASE + 0x508))
+#define TWIM0_PSEL_SDA         (*(volatile uint32_t *)(TWIM0_BASE + 0x50C))
+#define TWIM0_FREQUENCY        (*(volatile uint32_t *)(TWIM0_BASE + 0x524))
+
+#define TWIM0_TXD_PTR          (*(volatile uint32_t *)(TWIM0_BASE + 0x544))
+#define TWIM0_TXD_MAXCNT       (*(volatile uint32_t *)(TWIM0_BASE + 0x548))
+#define TWIM0_TXD_AMOUNT       (*(volatile uint32_t *)(TWIM0_BASE + 0x54C))
+
+#define TWIM0_ADDRESS          (*(volatile uint32_t *)(TWIM0_BASE + 0x588))
+
+/* TWIM FREQUENCY register values */
+#define TWIM_FREQ_100K  0x01980000
+#define TWIM_FREQ_250K  0x04000000
+#define TWIM_FREQ_400K  0x06400000
+
+/* TWIM ENABLE register */
+#define TWIM_ENABLE_VAL 6
+
+/* TWIM SHORTS bit positions */
+#define TWIM_SHORTS_LASTTX_STOP (1 << 9)
+
 #endif /* NRF52832_H */

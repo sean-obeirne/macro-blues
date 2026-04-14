@@ -12,6 +12,8 @@
 #include "hid_service.h"
 #include "battery.h"
 #include "keymap.h"
+#include "i2c.h"
+#include "ssd1306.h"
 
 int main(void)
 {
@@ -32,6 +34,11 @@ int main(void)
 		for (volatile int d = 0; d < 400000; d++)
 			;
 	}
+
+	/* ---- OLED display (Featherwing 128×32 via I2C) ---- */
+	i2c_init();
+	ssd1306_init();
+	ssd1306_fill(0xFF); /* all pixels on — proof of life */
 
 	key_init();
 	debounce_init();
