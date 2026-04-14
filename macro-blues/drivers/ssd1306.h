@@ -8,5 +8,6 @@
 
 void ssd1306_init(void);
 void ssd1306_fill(uint8_t pattern);
+void ssd1306_display_toggle(void);
 
 #endif /* SSD1306_H */

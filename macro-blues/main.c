@@ -115,6 +115,10 @@ int main(void)
 				changed = 1;
 		}
 
+		/* A0 (encoder button) pressed → toggle OLED on/off */
+		if (debounce_fell(0))
+			ssd1306_display_toggle();
+
 		if (changed && ble_stack_connected())
 		{
 				/* Build a report with all currently pressed keycodes */

@@ -77,3 +77,18 @@ void ssd1306_fill(uint8_t pattern)
 		remaining -= n;
 	}
 }
+
+static int display_on = 1;
+
+void ssd1306_display_toggle(void)
+{
+	static const uint8_t on_cmd[]  = { 0xAF };
+	static const uint8_t off_cmd[] = { 0xAE };
+
+	if (display_on)
+		ssd1306_cmd(off_cmd, sizeof(off_cmd));
+	else
+		ssd1306_cmd(on_cmd, sizeof(on_cmd));
+
+	display_on = !display_on;
+}
