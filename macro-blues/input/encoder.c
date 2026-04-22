@@ -34,7 +34,12 @@ static uint8_t read_state(void)
     return (uint8_t)((a << 1) | b);
 }
 
+/* Debounce: ignore button edges within 50 ms of the last accepted press.
+ * RTC1 runs at ~1024 Hz (prescaler=31), so 50 ms ≈ 51 ticks. */
+#define BTN_DEBOUNCE_TICKS 102
+
 static volatile int btn_fell;
+static volatile uint32_t btn_last_tick;
 
 void encoder_init(void)
 {
@@ -49,6 +54,7 @@ void encoder_init(void)
     prev_state = read_state();
     position = 0;
     btn_fell = 0;
+    btn_last_tick = 0;
 
     /* Configure GPIOTE channel 0 for ENC_A, channel 1 for ENC_B.
      * Both in event mode, toggle polarity (fires on any edge). */
@@ -89,7 +95,13 @@ int encoder_poll(void)
 
 void encoder_btn_isr_update(void)
 {
-    btn_fell = 1;
+    uint32_t now = RTC1_COUNTER;
+    uint32_t elapsed = (now - btn_last_tick) & 0x00FFFFFFu; /* 24-bit counter */
+    if (elapsed >= BTN_DEBOUNCE_TICKS)
+    {
+        btn_fell = 1;
+        btn_last_tick = now;
+    }
 }
 
 int encoder_btn_fell(void)
