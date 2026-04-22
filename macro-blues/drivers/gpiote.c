@@ -141,6 +141,11 @@ void GPIOTE_IRQHandler(void)
 		GPIOTE_EVENTS_IN(1) = 0;
 		encoder_isr_update();
 	}
+	if (GPIOTE_EVENTS_IN(2))
+	{
+		GPIOTE_EVENTS_IN(2) = 0;
+		encoder_btn_isr_update();
+	}
 
 	if (GPIOTE_EVENTS_PORT)
 	{

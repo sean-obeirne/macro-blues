@@ -126,6 +126,10 @@ int main(void)
 		if (enc)
 			ssd1306_scroll(enc);
 
+		/* Encoder button — toggle display on/off */
+		if (encoder_btn_fell())
+			ssd1306_display_toggle();
+
 		if (changed && ble_stack_connected())
 		{
 			/* Build a report with all currently pressed keycodes */

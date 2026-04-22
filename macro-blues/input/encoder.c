@@ -34,23 +34,38 @@ static uint8_t read_state(void)
     return (uint8_t)((a << 1) | b);
 }
 
+static volatile int btn_fell;
+
 void encoder_init(void)
 {
+    /* Configure encoder pins as inputs with pull-ups.
+     * The comment in the old code claimed key_init() did this, but
+     * key_init() only touches the matrix pins.  Without the input
+     * buffer connected the GPIOTE channels never fire. */
+    gpio_pin_cfg_input(PIN_ENC_A);
+    gpio_pin_cfg_input(PIN_ENC_B);
+    gpio_pin_cfg_input(PIN_ENC_BTN);
+
     prev_state = read_state();
     position = 0;
+    btn_fell = 0;
 
     /* Configure GPIOTE channel 0 for ENC_A, channel 1 for ENC_B.
      * Both in event mode, toggle polarity (fires on any edge). */
     GPIOTE_CONFIG(0) = GPIOTE_CONFIG_MODE_EVENT | ((uint32_t)PIN_ENC_A << 8) | GPIOTE_CONFIG_POL_TOGGLE;
-
     GPIOTE_CONFIG(1) = GPIOTE_CONFIG_MODE_EVENT | ((uint32_t)PIN_ENC_B << 8) | GPIOTE_CONFIG_POL_TOGGLE;
+
+    /* Configure GPIOTE channel 2 for ENC_BTN: HiToLo = press.
+     * Active-low button: idle=high, pressed=low. */
+    GPIOTE_CONFIG(2) = GPIOTE_CONFIG_MODE_EVENT | ((uint32_t)PIN_ENC_BTN << 8) | (2u << 16);
 
     /* Clear stale events */
     GPIOTE_EVENTS_IN(0) = 0;
     GPIOTE_EVENTS_IN(1) = 0;
+    GPIOTE_EVENTS_IN(2) = 0;
 
-    /* Enable IN[0] and IN[1] interrupts (bits 0 and 1) */
-    GPIOTE_INTENSET = (1u << 0) | (1u << 1);
+    /* Enable IN[0], IN[1], and IN[2] interrupts */
+    GPIOTE_INTENSET = (1u << 0) | (1u << 1) | (1u << 2);
 }
 
 void encoder_isr_update(void)
@@ -70,4 +85,19 @@ int encoder_poll(void)
     if (steps)
         position = 0;
     return steps;
+}
+
+void encoder_btn_isr_update(void)
+{
+    btn_fell = 1;
+}
+
+int encoder_btn_fell(void)
+{
+    if (btn_fell)
+    {
+        btn_fell = 0;
+        return 1;
+    }
+    return 0;
 }
