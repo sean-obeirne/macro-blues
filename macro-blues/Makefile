@@ -10,11 +10,12 @@ LD      = arm-none-eabi-gcc
 BUILD   = build
 TARGET  = $(BUILD)/macro-blues
 
-SRCS = hw/startup.c main.c drivers/timer.c drivers/gpio.c drivers/led.c \
+SRCS = hw/startup.c main.c drivers/timer.c drivers/gpio.c output/led.c \
        drivers/i2c.c drivers/ssd1306.c \
        input/keyswitch.c input/debounce.c input/encoder.c drivers/gpiote.c \
        ble/ble_stack.c ble/hid_service.c ble/bond.c \
-       input/keymap.c ble/battery.c
+       input/keymap.c ble/battery.c \
+       output/display.c
 
 INCLUDES = \
 	-I. \
@@ -22,6 +23,7 @@ INCLUDES = \
 	-Ible \
 	-Iinput \
 	-Idrivers \
+	-Ioutput \
 	-I$(SDK)/components/softdevice/s132/headers \
 	-I$(SDK)/components/softdevice/s132/headers/nrf52 \
 	-I$(SDK)/components/toolchain/cmsis/include \
