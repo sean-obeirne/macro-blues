@@ -1,5 +1,4 @@
 #include <stdbool.h>
-#include <string.h>
 
 #include "board.h"
 #include "gpio.h"
@@ -84,8 +83,6 @@ int main(void)
 	led_all_off();
 
 	int raw[NUM_KEYS];
-	int prev_pressed[NUM_KEYS];
-	memset(prev_pressed, 0, sizeof(prev_pressed));
 
 	/* Battery check counter.  Each main-loop idle sleep is
 	 * roughly 1 event period; we sample every ~3000 iterations
@@ -117,9 +114,12 @@ int main(void)
 				changed = 1;
 		}
 
-		/* A0 (encoder button) pressed → toggle OLED on/off */
-		if (debounce_fell(0))
-			ssd1306_display_toggle();
+		/* Debug: blue LED reflects live "any key pressed" state.
+		 * ON while one or more of the NUM_KEYS pins reads low. */
+		if (key_any_pressed())
+			led_on(LED_BLUE);
+		else
+			led_off(LED_BLUE);
 
 		/* Rotary encoder — scroll display vertically */
 		int enc = encoder_poll();
@@ -164,13 +164,12 @@ int main(void)
 
 		if (key_any_pressed() || debounce_settling())
 		{
-			/* Keys are active — poll at ~10 ms for debounce. */
+			/* Keys active — poll at ~10 ms for debounce. */
 			wait_ms(10);
 		}
 		else
 		{
-			/* Idle — arm GPIOTE and sleep until a key press
-			 * or BLE event wakes the CPU. */
+			/* Idle — arm GPIOTE (drives rows low) and sleep. */
 			gpiote_arm();
 			ble_stack_wait();
 		}

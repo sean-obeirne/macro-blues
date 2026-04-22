@@ -1,4 +1,5 @@
 #include "nrf52832.h"
+#include "gpio.h"
 #include "board.h"
 #include "keyswitch.h"
 #include "gpiote.h"
@@ -47,8 +48,12 @@ void gpiote_init(void)
 	 * the only field we're changing — but the hardware sees the full
 	 * register write, so we still need the two-step sequence.
 	 */
-	for (int i = 0; i < NUM_KEYS; i++) {
-		uint32_t pin = key_pins[i];
+	/* Set SENSE_LOW on column pins only.
+	 * gpiote_arm() drives all rows LOW before sleep, so any key press
+	 * pulls a column low and fires the PORT event to wake the CPU. */
+	for (int c = 0; c < NUM_COLS; c++)
+	{
+		uint32_t pin = col_pins[c];
 		uint32_t cnf = GPIO_PIN_CNF(pin);
 
 		/* Step 1: ensure SENSE=Disabled (INPUT already 0) */
@@ -56,7 +61,7 @@ void gpiote_init(void)
 		GPIO_PIN_CNF(pin) = cnf;
 
 		/* Step 2: set SENSE_LOW in a separate write */
-		cnf |= (3u << PIN_CNF_SENSE);   /* SENSE_LOW = 3 */
+		cnf |= (3u << PIN_CNF_SENSE); /* SENSE_LOW = 3 */
 		GPIO_PIN_CNF(pin) = cnf;
 	}
 
@@ -66,8 +71,8 @@ void gpiote_init(void)
 
 	/* Clear any stale PORT event with read-back barrier */
 	GPIOTE_EVENTS_PORT = 0;
-	(void)GPIOTE_EVENTS_PORT;   /* read-back: wait for peripheral */
-	__asm volatile ("dsb" ::: "memory");
+	(void)GPIOTE_EVENTS_PORT; /* read-back: wait for peripheral */
+	__asm volatile("dsb" ::: "memory");
 
 	/* Enable PORT event interrupt in GPIOTE peripheral (bit 31) */
 	GPIOTE_INTENSET = (1u << 31);
@@ -84,14 +89,22 @@ void gpiote_init(void)
 
 void gpiote_arm(void)
 {
+	/* Drive all rows LOW so any key press pulls a column low,
+	 * allowing the PORT SENSE to fire and wake the CPU from sleep. */
+	for (int r = 0; r < NUM_ROWS; r++)
+	{
+		gpio_pin_cfg_output(row_pins[r]);
+		gpio_pin_clear(row_pins[r]);
+	}
+
 	/*
 	 * Clear stale PORT event so sd_app_evt_wait() doesn't return
 	 * immediately.  The read-back + DSB ensures the peripheral has
 	 * dropped the IRQ line before we clear the NVIC pending bit.
 	 */
 	GPIOTE_EVENTS_PORT = 0;
-	(void)GPIOTE_EVENTS_PORT;              /* read-back barrier */
-	__asm volatile ("dsb" ::: "memory");   /* complete all writes */
+	(void)GPIOTE_EVENTS_PORT;			/* read-back barrier */
+	__asm volatile("dsb" ::: "memory"); /* complete all writes */
 	sd_nvic_irq_clear_pending(GPIOTE_IRQN);
 
 	event_flag = 0;
@@ -99,7 +112,8 @@ void gpiote_arm(void)
 
 int gpiote_event_fired(void)
 {
-	if (event_flag) {
+	if (event_flag)
+	{
 		event_flag = 0;
 		return 1;
 	}
@@ -128,10 +142,11 @@ void GPIOTE_IRQHandler(void)
 		encoder_isr_update();
 	}
 
-	if (GPIOTE_EVENTS_PORT) {
+	if (GPIOTE_EVENTS_PORT)
+	{
 		GPIOTE_EVENTS_PORT = 0;
-		(void)GPIOTE_EVENTS_PORT;   /* read-back barrier */
-		__asm volatile ("dsb" ::: "memory");
+		(void)GPIOTE_EVENTS_PORT; /* read-back barrier */
+		__asm volatile("dsb" ::: "memory");
 		event_flag = 1;
 	}
 }

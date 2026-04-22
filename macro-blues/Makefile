@@ -54,12 +54,15 @@ LDFLAGS = \
 	--specs=nano.specs
 
 OBJS = $(patsubst %.c, $(BUILD)/%.o, $(SRCS))
+DEPS = $(OBJS:.o=.d)
 
 all: $(TARGET).hex
 
+-include $(DEPS)
+
 $(BUILD)/%.o: %.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(TARGET).elf: $(OBJS)
 	$(LD) $(LDFLAGS) $(OBJS) -o $@
