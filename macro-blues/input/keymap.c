@@ -2,43 +2,47 @@
 #include "hid_service.h"
 
 /*
- * Matrix transposed to 3 rows (A3/A4/A5) × 4 cols (SCK/MOSI/MISO/RX).
- * Physical key (old_row r, old_col c) now lives at index c*4+r.
- * old layout: rows=SCK/MOSI/MISO/RX, cols=A3/A4/A5, index=r*3+c
+ * Written in physical reading order (top-left → bottom-right).
+ * Scan index = r*NUM_COLS + c, where r=row(SCK/MOSI/MISO/RX), c=col(A3/A4/A5).
+ * Designated initializers map visual position to the correct scan index.
  *
- * Mapping old_idx → new_idx:
- *   0(r0c0)→0  1(r0c1)→4  2(r0c2)→8
- *   3(r1c0)→1  4(r1c1)→5  5(r1c2)→9
- *   6(r2c0)→2  7(r2c1)→6  8(r2c2)→10
- *   9(r3c0)→3 10(r3c1)→7 11(r3c2)→11
+ *            SCK[r0] MOSI[r1] MISO[r2] RX[r3]
+ *   A3[c0]:   [0]     [3]      [6]      [9]
+ *   A4[c1]:   [1]     [4]      [7]      [10]
+ *   A5[c2]:   [2]     [5]      [8]      [11]
  */
 const uint8_t keymap[NUM_KEYS] = {
-    /* col: SCK  MOSI  MISO  RX  */
-    /* A3 */ HID_KEY_V,
-    HID_KEY_D,
-    HID_KEY_G,
-    HID_KEY_J,
-    /* A4 */ HID_KEY_B,
-    HID_KEY_E,
-    HID_KEY_H,
-    HID_KEY_K,
-    /* A5 */ HID_KEY_C,
-    HID_KEY_F,
-    HID_KEY_I,
-    HID_KEY_L,
+    /* top row */
+    [0] = HID_KEY_NONE,
+    [3] = HID_KEY_NONE,
+    [6] = HID_KEY_NONE,
+    [9] = HID_KEY_NONE,
+    /* middle row */
+    [1] = HID_KEY_F4,
+    [4] = HID_KEY_F3,
+    [7] = HID_KEY_F2,
+    [10] = HID_KEY_F1,
+    /* bottom row */
+    [2] = HID_KEY_F5,
+    [5] = HID_KEY_F6,
+    [8] = HID_KEY_NONE,
+    [11] = HID_KEY_NONE,
 };
 
 const uint8_t keymod[NUM_KEYS] = {
-    /* A3 */ HID_MOD_HYPER,
-    0,
-    0,
-    0,
-    /* A4 */ HID_MOD_HYPER,
-    0,
-    0,
-    0,
-    /* A5 */ 0,
-    0,
-    0,
-    0,
+    /* top row */
+    [0] = 0,
+    [3] = 0,
+    [6] = 0,
+    [9] = 0,
+    /* middle row */
+    [1] = 0,
+    [4] = 0,
+    [7] = 0,
+    [10] = 0,
+    /* bottom row */
+    [2] = 0,
+    [5] = 0,
+    [8] = 0,
+    [11] = 0,
 };
