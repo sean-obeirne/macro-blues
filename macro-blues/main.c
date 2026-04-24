@@ -140,8 +140,11 @@ int main(void)
 			{
 				if (debounce_state(i))
 				{
-					mod |= keymod[i];
-					keys[count++] = keymap[i];
+					if (keymap[i] != HID_KEY_NONE)
+					{
+						mod |= keymod[i];
+						keys[count++] = keymap[i];
+					}
 				}
 			}
 			hid_service_send_report(mod, keys, count);

@@ -18,15 +18,15 @@ const uint8_t keymap[NUM_KEYS] = {
     [6] = HID_KEY_NONE,
     [9] = HID_KEY_NONE,
     /* middle row */
-    [1] = HID_KEY_F4,
-    [4] = HID_KEY_F3,
-    [7] = HID_KEY_F2,
-    [10] = HID_KEY_F1,
+    [1] = HID_KEY_F1,
+    [4] = HID_KEY_F2,
+    [7] = HID_KEY_F3,
+    [10] = HID_KEY_F4,
     /* bottom row */
-    [2] = HID_KEY_F5,
-    [5] = HID_KEY_F6,
-    [8] = HID_KEY_NONE,
-    [11] = HID_KEY_NONE,
+    [2] = HID_KEY_NONE,
+    [5] = HID_KEY_NONE,
+    [8] = HID_KEY_F6,
+    [11] = HID_KEY_F5,
 };
 
 const uint8_t keymod[NUM_KEYS] = {
