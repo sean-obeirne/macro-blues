@@ -100,8 +100,22 @@ int main(void)
 	while (true)
 	{
 		display_clear();
-		// display_string(0, 1, "BAT", 1);
-		display_string(0, 1, "BAT", 2);
+
+		/* Top: "RS" centered, scale 2 */
+		display_string(5, 0, "RS", 2);
+
+		/* Battery icon below, on the left, 50% full for now */
+		int bx = 2, by = 24;
+		display_rect(bx, by, 24, 12, 1);          // outer body (filled)
+		display_rect(bx + 1, by + 1, 22, 10, 0);  // hollow it out → 1px outline
+		display_rect(bx + 24, by + 4, 2, 4, 1);   // terminal nub
+		int pct = 50;
+		int fill_w = (20 * pct) / 100;
+		display_rect(bx + 2, by + 2, fill_w, 8, 1);
+
+		/* Bottom: "SC" centered, scale 2 */
+		display_string(5, 5, "SC", 2);
+
 		display_flush();
 
 		ble_stack_process();

@@ -22,6 +22,9 @@ void display_flush(void);
 
 void display_pixel(int x, int y, int on);
 
+/* Filled rectangle: w pixels along x, h pixels along y, all set to on. */
+void display_rect(int x, int y, int w, int h, int on);
+
 /* Draw a single ASCII character at pixel position (x, y), scaled by scale. */
 void display_char(int x, int y, char c, int scale);
 

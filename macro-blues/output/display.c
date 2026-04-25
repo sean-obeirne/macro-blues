@@ -35,6 +35,12 @@ void display_pixel(int x, int y, int on) {
         fb[page * FB_WIDTH + y] &= ~(1 << bit);
 }
 
+void display_rect(int x, int y, int w, int h, int on) {
+    for (int i = 0; i < w; i++)
+        for (int j = 0; j < h; j++)
+            display_pixel(x + i, y + j, on);
+}
+
 void display_char(int x, int y, char c, int scale) {
     const uint8_t *g = glyph(c);
     for (int col = 0; col < 5; col++) {
