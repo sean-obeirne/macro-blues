@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "board.h"
 #include "gpio.h"
@@ -13,6 +14,43 @@
 #include "keymap.h"
 #include "encoder.h"
 #include "display.h"
+
+/* 7w × 10h lightning bolt */
+static const uint8_t bolt_bmp[10] = {
+	0b0000111,
+	0b0001110,
+	0b0011100,
+	0b0111000,
+	0b1111110,
+	0b0111111,
+	0b0001110,
+	0b0011100,
+	0b0111000,
+	0b1110000,
+};
+
+/* 8w × 11h bluetooth rune */
+static const uint8_t bt_bmp[11] = {
+	0b00001000,
+	0b00001100,
+	0b10001010,
+	0b01001010,
+	0b00101100,
+	0b00011000,
+	0b00101100,
+	0b01001010,
+	0b10001010,
+	0b00001100,
+	0b00001000,
+};
+
+static void draw_bitmap(int x, int y, int w, int h, const uint8_t *bmp)
+{
+	for (int row = 0; row < h; row++)
+		for (int col = 0; col < w; col++)
+			if (bmp[row] & (1 << (w - 1 - col)))
+				display_pixel(x + col, y + row, 1);
+}
 
 int main(void)
 {
@@ -101,20 +139,34 @@ int main(void)
 	{
 		display_clear();
 
-		/* Top: "RS" centered, scale 2 */
+		/* ---- Layer name: "RS", scale 2, centered ---- */
+		/* 2 chars × (5*2+1)=11 = 22px, minus trailing gap = 21px. center=(32-21)/2=5 */
 		display_string(5, 0, "RS", 2);
 
-		/* Battery icon below, on the left, 50% full for now */
-		int bx = 2, by = 24;
-		display_rect(bx, by, 24, 12, 1);          // outer body (filled)
-		display_rect(bx + 1, by + 1, 22, 10, 0);  // hollow it out → 1px outline
-		display_rect(bx + 24, by + 4, 2, 4, 1);   // terminal nub
-		int pct = 50;
-		int fill_w = (20 * pct) / 100;
-		display_rect(bx + 2, by + 2, fill_w, 8, 1);
+		/* ---- Battery indicator ---- */
+		int pct      = 50; /* TODO: replace with battery_percent() */
+		int charging = 1;  /* TODO: replace with charging pin read  */
 
-		/* Bottom: "SC" centered, scale 2 */
-		display_string(5, 5, "SC", 2);
+		/* body: x=4..27 (24px wide), y=22..31 (10px tall) */
+		display_rect(4,  22, 24, 10, 1);  /* filled */
+		display_rect(5,  23, 22,  8, 0);  /* hollow */
+		display_rect(28, 25,  2,  4, 1);  /* nub on right */
+		int fill_w = (20 * pct) / 100;    /* 0–20px inside 22px interior */
+		display_rect(6, 24, fill_w, 6, 1);
+
+		/* ---- Charging + BLE status row (y=46-56) ---- */
+		int connected = ble_stack_connected();
+
+		/* Lightning bolt (left, 7w×10h) */
+		if (charging)
+			draw_bitmap(2, 46, 7, 10, bolt_bmp);
+
+		/* Bluetooth rune (right, 8w×11h) */
+		if (connected)
+			draw_bitmap(20, 46, 8, 11, bt_bmp);
+
+		/* ---- Encoder mode: "SC", scale 2, centered ---- */
+		display_string(5, 12, "SC", 2);
 
 		display_flush();
 
