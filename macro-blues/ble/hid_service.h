@@ -31,6 +31,9 @@ void hid_service_init(void);
  * (written 0x0001 to the CCCD). */
 void hid_service_send_report(uint8_t modifier, const uint8_t *keys, uint8_t num_keys);
 
+/* Send a mouse scroll wheel delta (+ve = up, -ve = down) */
+void hid_service_send_scroll(int8_t delta);
+
 /* Convenience: send a single keycode press (no modifiers) */
 void hid_service_send_key(uint8_t keycode);
 

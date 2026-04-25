@@ -35,13 +35,14 @@
 
 static uint16_t service_handle;
 static ble_gatts_char_handles_t report_handles;
+static ble_gatts_char_handles_t scroll_report_handles;
 static ble_gatts_char_handles_t report_map_handles;
 static ble_gatts_char_handles_t hid_info_handles;
 static ble_gatts_char_handles_t protocol_mode_handles;
 
-/* Track whether the central has enabled notifications on the Report
- * characteristic (by writing 0x0001 to the CCCD). */
+/* Track whether the central has enabled notifications on each Report. */
 static uint8_t notifications_enabled;
+static uint8_t scroll_notifications_enabled;
 
 /* ---- HID Report Descriptor (Report Map) ----
  *
@@ -129,7 +130,23 @@ static const uint8_t report_map[] = {
     0x81,
     0x00, /*   Input (Data, Array) */
 
-    0xC0, /* End Collection */
+    0xC0, /* End Collection (Keyboard) */
+
+    /* ---- Report ID 2: Mouse (scroll wheel only) ---- */
+    0x05, 0x01,       /* Usage Page (Generic Desktop) */
+    0x09, 0x02,       /* Usage (Mouse) */
+    0xA1, 0x01,       /* Collection (Application) */
+    0x85, 0x02,       /*   Report ID (2) */
+    0x09, 0x01,       /*   Usage (Pointer) */
+    0xA1, 0x00,       /*   Collection (Physical) */
+    0x09, 0x38,       /*     Usage (Wheel) */
+    0x15, 0x81,       /*     Logical Minimum (-127) */
+    0x25, 0x7F,       /*     Logical Maximum (127) */
+    0x75, 0x08,       /*     Report Size (8) */
+    0x95, 0x01,       /*     Report Count (1) */
+    0x81, 0x06,       /*     Input (Data, Variable, Relative) */
+    0xC0,             /*   End Collection (Physical) */
+    0xC0,             /* End Collection (Mouse) */
 };
 
 /* ---- HID Information value ---- */
@@ -392,6 +409,64 @@ void hid_service_init(void)
         add_report_reference(report_handles.value_handle);
     }
 
+    /* ---- 3b. Scroll Report (0x2A4D) — Report ID 2, 1 byte ---- */
+    {
+        static const uint8_t scroll_report_ref[] = {0x02, 0x01}; /* ID 2, Input */
+
+        ble_gatts_char_md_t char_md;
+        memset(&char_md, 0, sizeof(char_md));
+        char_md.char_props.read = 1;
+        char_md.char_props.notify = 1;
+
+        ble_gatts_attr_md_t cccd_md;
+        memset(&cccd_md, 0, sizeof(cccd_md));
+        BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cccd_md.read_perm);
+        BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&cccd_md.write_perm);
+        cccd_md.vloc = BLE_GATTS_VLOC_STACK;
+        char_md.p_cccd_md = &cccd_md;
+
+        ble_gatts_attr_md_t attr_md;
+        memset(&attr_md, 0, sizeof(attr_md));
+        BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&attr_md.read_perm);
+        BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&attr_md.write_perm);
+        attr_md.vloc = BLE_GATTS_VLOC_STACK;
+        attr_md.vlen = 1;
+
+        ble_uuid_t uuid = {.uuid = 0x2A4D, .type = BLE_UUID_TYPE_BLE};
+
+        ble_gatts_attr_t attr = {
+            .p_uuid = &uuid,
+            .p_attr_md = &attr_md,
+            .init_len = 0,
+            .max_len = 1,
+            .p_value = NULL,
+        };
+
+        err = sd_ble_gatts_characteristic_add(service_handle,
+                                              &char_md, &attr,
+                                              &scroll_report_handles);
+        if (err != NRF_SUCCESS)
+            hid_error_blink(9, err);
+
+        /* Report Reference descriptor: ID 2, Input */
+        ble_uuid_t desc_uuid = {.uuid = 0x2908, .type = BLE_UUID_TYPE_BLE};
+        ble_gatts_attr_md_t desc_md;
+        memset(&desc_md, 0, sizeof(desc_md));
+        BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&desc_md.read_perm);
+        BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&desc_md.write_perm);
+        desc_md.vloc = BLE_GATTS_VLOC_STACK;
+        ble_gatts_attr_t desc_attr = {
+            .p_uuid = &desc_uuid,
+            .p_attr_md = &desc_md,
+            .init_len = sizeof(scroll_report_ref),
+            .max_len = sizeof(scroll_report_ref),
+            .p_value = (uint8_t *)scroll_report_ref,
+        };
+        uint16_t desc_handle;
+        sd_ble_gatts_descriptor_add(scroll_report_handles.value_handle,
+                                    &desc_attr, &desc_handle);
+    }
+
     /* ---- 4. Protocol Mode (0x2A4E) — read + write-no-response ---- */
     {
         ble_gatts_char_md_t char_md;
@@ -432,9 +507,9 @@ void hid_service_on_write(uint16_t handle, const uint8_t *data, uint16_t len)
     /* The central enables notifications by writing 0x0001 to the
      * Report characteristic's CCCD. */
     if (handle == report_handles.cccd_handle && len >= 2)
-    {
         notifications_enabled = (data[0] & 0x01);
-    }
+    if (handle == scroll_report_handles.cccd_handle && len >= 2)
+        scroll_notifications_enabled = (data[0] & 0x01);
 }
 
 /* ---- Report sending ---- */
@@ -470,6 +545,24 @@ void hid_service_send_report(uint8_t modifier, const uint8_t *keys, uint8_t num_
     sd_ble_gatts_hvx(conn, &hvx);
     /* Ignore errors — the central may not be ready or the TX queue
      * may be full.  Next key event will try again. */
+}
+
+void hid_service_send_scroll(int8_t delta)
+{
+    uint16_t conn = ble_stack_conn_handle();
+    if (conn == 0xFFFF || !scroll_notifications_enabled)
+        return;
+
+    uint8_t report = (uint8_t)delta;
+    uint16_t len = 1;
+    ble_gatts_hvx_params_t hvx = {
+        .handle = scroll_report_handles.value_handle,
+        .type = BLE_GATT_HVX_NOTIFICATION,
+        .offset = 0,
+        .p_len = &len,
+        .p_data = &report,
+    };
+    sd_ble_gatts_hvx(conn, &hvx);
 }
 
 void hid_service_send_key(uint8_t keycode)

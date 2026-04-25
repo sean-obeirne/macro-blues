@@ -83,6 +83,7 @@ int main(void)
 	led_all_off();
 
 	int raw[NUM_KEYS];
+	int display_mode = 0; /* 0 = scroll host, 1 = scroll OLED */
 
 	/* Battery check counter.  Each main-loop idle sleep is
 	 * roughly 1 event period; we sample every ~3000 iterations
@@ -121,14 +122,22 @@ int main(void)
 		else
 			led_off(LED_BLUE);
 
-		/* Rotary encoder — scroll display vertically */
+		/* Rotary encoder — default: scroll host page; display mode: scroll OLED */
 		int enc = encoder_poll();
 		if (enc)
-			ssd1306_scroll(enc);
+		{
+			if (display_mode)
+				ssd1306_scroll(enc);
+			else if (ble_stack_connected())
+				hid_service_send_scroll((int8_t)(enc > 0 ? -1 : 1));
+		}
 
-		/* Encoder button — toggle display on/off */
+		/* Encoder button — toggle between host-scroll and OLED-scroll modes */
 		if (encoder_btn_fell())
+		{
+			display_mode = !display_mode;
 			ssd1306_display_toggle();
+		}
 
 		if (changed && ble_stack_connected())
 		{
