@@ -9,9 +9,9 @@
  * Sits on top of the ssd1306 driver.  Maintains a 512-byte framebuffer
  * in RAM; call display_flush() to push it to the panel over I2C.
  *
- * Coordinate system: (0,0) = top-left, x increases right, y increases down.
+ * Coordinate system: (0,0) = top-left, x increases downward (0–31), y increases right (0–127).
  * Font: 5×7 pixels per character, 1-pixel gap between characters.
- *   → 21 chars per line, 4 lines at 8 px line-height on a 128×32 panel.
+ *   → 21 chars per row, 4 rows at 8 px row-height on a 128×32 panel.
  */
 
 extern uint8_t fb[];

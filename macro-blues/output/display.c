@@ -26,20 +26,22 @@ void display_flush(void) {
 }
 
 void display_pixel(int x, int y, int on) {
-    int page = y / 8;
-    int bit = y % 8;
+    int landscape_row = 31 - x;
+    int page = landscape_row / 8;
+    int bit = landscape_row % 8;
     if (on)
-        fb[page * FB_WIDTH + x] |= (1 << bit);
+        fb[page * FB_WIDTH + y] |= (1 << bit);
     else
-        fb[page * FB_WIDTH + x] &= ~(1 << bit);
+        fb[page * FB_WIDTH + y] &= ~(1 << bit);
 }
 
 void display_char(int x, int y, char c) {
     const uint8_t *g = glyph(c);
-    int page = y / 8;
-    for (int col = 0; col < 5; col++)
-        fb[page * FB_WIDTH + x + col] = g[col];
-    // col 5 = spacing gap, leave zero
+    for (int col = 0; col < 5; col++) {
+        for (int row = 0; row < 8; row++) {
+            display_pixel(x + col, y + row, (g[col] >> row) & 1);
+        }
+    }
 }
 
 void display_scroll(int cols) {
@@ -53,11 +55,11 @@ void display_toggle(void) {
 void display_string(int x, int y, const char *s) {
     while (*s) {
         display_char(x, y, *s++);
-        x += 6; // 5 px char + 1 px gap
-        if (x + 5 >= FB_WIDTH) { // wrap to next line if no room for next char
-            x = 0;
-            y += 8;
-            if (y >= FB_PAGES * 8) // no more room on display
+        y += 9; // 8 px char height + 1 px gap
+        if (y + 8 >= FB_WIDTH) { // no room for next char along y
+            y = 0;
+            x += 6; // 5 px char width + 1 px gap
+            if (x + 5 > FB_PAGES * 8) // no more rows on display
                 break;
         }
     }
