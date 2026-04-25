@@ -22,12 +22,11 @@ void display_flush(void);
 
 void display_pixel(int x, int y, int on);
 
-/* Draw a single ASCII character at pixel position (x, y). */
-void display_char(int x, int y, char c);
+/* Draw a single ASCII character at pixel position (x, y), scaled by scale. */
+void display_char(int x, int y, char c, int scale);
 
-/* Draw a null-terminated string starting at pixel position (x, y).
- * Wraps to the next 8-px-aligned row when the line is full. */
-void display_string(int x, int y, const char *s);
+/* Draw a null-terminated string. row is 0-based portrait row (9px each). x is pixel x offset. */
+void display_string(int x, int row, const char *s, int scale);
 
 /* Hardware scroll the panel content by cols columns. */
 void display_scroll(int cols);

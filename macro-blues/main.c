@@ -99,7 +99,9 @@ int main(void)
 	 */
 	while (true)
 	{
-		display_char(0, 0, 'A' + (bat_counter / 300) % 26); /* rotating progress indicator */		
+		display_clear();
+		// display_string(0, 1, "BAT", 1);
+		display_string(0, 1, "BAT", 2);
 		display_flush();
 
 		ble_stack_process();

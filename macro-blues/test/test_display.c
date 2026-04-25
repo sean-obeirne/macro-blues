@@ -41,8 +41,7 @@ int main(void) {
     display_init();
     display_clear();
 
-    display_string(0, 0, "Hello, world!");
-    display_string(0, 8, "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+    display_string(0, 0, "ABCDE", 2);
 
     display_flush();
     fb_print();

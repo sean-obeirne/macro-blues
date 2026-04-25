@@ -35,11 +35,14 @@ void display_pixel(int x, int y, int on) {
         fb[page * FB_WIDTH + y] &= ~(1 << bit);
 }
 
-void display_char(int x, int y, char c) {
+void display_char(int x, int y, char c, int scale) {
     const uint8_t *g = glyph(c);
     for (int col = 0; col < 5; col++) {
         for (int row = 0; row < 8; row++) {
-            display_pixel(x + col, y + row, (g[col] >> row) & 1);
+            int on = (g[col] >> row) & 1;
+            for (int sx = 0; sx < scale; sx++)
+                for (int sy = 0; sy < scale; sy++)
+                    display_pixel(x + col * scale + sx, y + row * scale + sy, on);
         }
     }
 }
@@ -52,14 +55,17 @@ void display_toggle(void) {
     ssd1306_display_toggle();
 }
 
-void display_string(int x, int y, const char *s) {
+void display_string(int x, int row, const char *s, int scale) {
+    int y = row * 9;           // convert row → portrait y pixel
+    int char_h = 8 * scale + 1;
+    int char_w = 5 * scale + 1;
     while (*s) {
-        display_char(x, y, *s++);
-        y += 9; // 8 px char height + 1 px gap
-        if (y + 8 >= FB_WIDTH) { // no room for next char along y
-            y = 0;
-            x += 6; // 5 px char width + 1 px gap
-            if (x + 5 > FB_PAGES * 8) // no more rows on display
+        display_char(x, y, *s++, scale);
+        x += char_w;                        // advance across the screen
+        if (x + char_w > FB_PAGES * 8) {   // no room for next char → next line
+            x = 0;
+            y += char_h;
+            if (y + char_h > FB_WIDTH)      // off the bottom
                 break;
         }
     }
