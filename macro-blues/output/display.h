@@ -14,6 +14,8 @@
  *   → 21 chars per line, 4 lines at 8 px line-height on a 128×32 panel.
  */
 
+extern uint8_t fb[];
+
 void display_init(void);
 void display_clear(void);
 void display_flush(void);
@@ -26,5 +28,11 @@ void display_char(int x, int y, char c);
 /* Draw a null-terminated string starting at pixel position (x, y).
  * Wraps to the next 8-px-aligned row when the line is full. */
 void display_string(int x, int y, const char *s);
+
+/* Hardware scroll the panel content by cols columns. */
+void display_scroll(int cols);
+
+/* Toggle the display on/off without clearing the framebuffer. */
+void display_toggle(void);
 
 #endif /* DISPLAY_H */

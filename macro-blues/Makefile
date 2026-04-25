@@ -15,7 +15,7 @@ SRCS = hw/startup.c main.c drivers/timer.c drivers/gpio.c output/led.c \
        input/keyswitch.c input/debounce.c input/encoder.c drivers/gpiote.c \
        ble/ble_stack.c ble/hid_service.c ble/bond.c \
        input/keymap.c ble/battery.c \
-       output/display.c
+       output/display.c output/glyphs.c
 
 INCLUDES = \
 	-I. \
@@ -95,6 +95,10 @@ flash: $(TARGET).hex
 		--application $(TARGET).hex $(BUILD)/app_package.zip
 	adafruit-nrfutil dfu serial --package $(BUILD)/app_package.zip \
 		-p $(PORT) -b $(BAUD) --singlebank --touch 1200
+
+test-glyphs:
+	gcc -Itest/stubs -Ioutput -I. test/test_display.c output/display.c output/glyphs.c -o $(BUILD)/test_display
+	./$(BUILD)/test_display
 
 clean:
 	rm -rf $(BUILD)

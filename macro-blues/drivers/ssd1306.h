@@ -11,5 +11,6 @@ void ssd1306_fill(uint8_t pattern);
 void ssd1306_fill_all(uint8_t pattern);
 void ssd1306_display_toggle(void);
 void ssd1306_scroll(int rows);
+void ssd1306_write(const uint8_t *data, uint32_t len);
 
 #endif /* SSD1306_H */

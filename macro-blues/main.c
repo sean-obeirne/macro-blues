@@ -11,9 +11,8 @@
 #include "hid_service.h"
 #include "battery.h"
 #include "keymap.h"
-#include "i2c.h"
-#include "ssd1306.h"
 #include "encoder.h"
+#include "display.h"
 
 int main(void)
 {
@@ -36,9 +35,7 @@ int main(void)
 	}
 
 	/* ---- OLED display (Featherwing 128×32 via I2C) ---- */
-	i2c_init();
-	ssd1306_init();
-	ssd1306_fill(0xFF); /* all pixels on — proof of life */
+	display_init();
 
 	key_init();
 	debounce_init();
@@ -127,7 +124,7 @@ int main(void)
 		if (enc)
 		{
 			if (display_mode)
-				ssd1306_scroll(enc);
+				display_scroll(enc);
 			else if (ble_stack_connected())
 				hid_service_send_scroll((int8_t)(enc > 0 ? -1 : 1));
 		}
@@ -136,7 +133,7 @@ int main(void)
 		if (encoder_btn_fell())
 		{
 			display_mode = !display_mode;
-			ssd1306_display_toggle();
+			display_toggle();
 		}
 
 		if (changed && ble_stack_connected())

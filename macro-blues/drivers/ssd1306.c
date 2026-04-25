@@ -100,6 +100,25 @@ void ssd1306_fill(uint8_t pattern)
     ssd1306_fill_pages(0, 3, pattern);
 }
 
+void ssd1306_write(const uint8_t *data, uint32_t len)
+{
+    static const uint8_t col_cmd[] = {0x21, 0x00, 0x7F};
+    ssd1306_cmd(col_cmd, sizeof(col_cmd));
+
+    static const uint8_t page_cmd[] = {0x22, 0x00, 0x03};
+    ssd1306_cmd(page_cmd, sizeof(page_cmd));
+
+    chunk_buf[0] = CTRL_DATA;
+    while (len > 0)
+    {
+        uint32_t n = len < CHUNK_DATA ? len : CHUNK_DATA;
+        memcpy(&chunk_buf[1], data, n);
+        i2c_write(SSD1306_ADDR, chunk_buf, n + 1);
+        data += n;
+        len -= n;
+    }
+}
+
 static int display_on = 1;
 
 void ssd1306_display_toggle(void)
