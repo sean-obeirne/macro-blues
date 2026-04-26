@@ -210,7 +210,7 @@ int main(void)
 		if (changed && ble_stack_connected())
 		{
 			/* Build a report with all currently pressed keycodes */
-			uint8_t keys[6];
+			uint8_t keys[6] = {0};
 			uint8_t mod = 0;
 			uint8_t count = 0;
 			for (int i = 0; i < NUM_KEYS && count < 6; i++)

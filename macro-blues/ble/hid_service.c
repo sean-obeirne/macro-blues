@@ -520,10 +520,16 @@ void hid_service_send_report(uint8_t modifier, const uint8_t *keys, uint8_t num_
 
     /* Build the 9-byte keyboard report: Report ID + modifier + reserved + 6 keys.
      * Report ID must be the first byte when the descriptor has multiple reports. */
-    uint8_t report[9];
-    report[0] = 0x01; /* Report ID 1 = keyboard */
-    report[1] = modifier;
-    report[2] = 0x00; /* reserved */
+    // uint8_t report[9];
+    // report[0] = 0x01; /* Report ID 1 = keyboard */
+    // report[1] = modifier;
+    // report[2] = 0x00; /* reserved */
+    uint8_t report[8];
+    report[0] = modifier;
+    report[1] = 0x00;
+
+    for (int i = 0; i < 6; i++)
+        report[2 + i] = (i < num_keys) ? keys[i] : 0x00;
 
     /* Fill in up to 6 keycodes */
     for (int i = 0; i < 6; i++)
