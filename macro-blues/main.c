@@ -144,7 +144,7 @@ int main(void)
 		display_string(5, 0, "RS", 2);
 
 		/* ---- Battery indicator ---- */
-		int pct      = 50; /* TODO: replace with battery_percent() */
+		int pct      = battery_percent();
 		int charging = 1;  /* TODO: replace with charging pin read  */
 
 		/* body: x=4..27 (24px wide), y=22..31 (10px tall) */

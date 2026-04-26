@@ -23,10 +23,10 @@ const uint8_t keymap[NUM_KEYS] = {
     [7] = HID_KEY_F2,
     [10] = HID_KEY_F1,
     /* bottom row */
-    [2] = HID_KEY_F5,
-    [5] = HID_KEY_F6,
-    [8] = HID_KEY_NONE,
-    [11] = HID_KEY_NONE,
+    [2] = HID_KEY_NONE,
+    [5] = HID_KEY_NONE,
+    [8] = HID_KEY_F6,
+    [11] = HID_KEY_F5,
 };
 
 const uint8_t keymod[NUM_KEYS] = {
