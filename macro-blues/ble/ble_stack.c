@@ -421,6 +421,11 @@ void ble_stack_process(void)
             {
                 bond_save(&own_enc_key, &peer_id_key);
             }
+            else
+            {
+                bond_delete();
+                ble_stack_advertise();
+            }
             break;
         }
 
