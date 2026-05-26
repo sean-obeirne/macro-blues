@@ -578,3 +578,21 @@ void hid_service_send_release(void)
 {
     hid_service_send_report(0, NULL, 0);
 }
+
+void hid_service_send_mouse_buttons(uint8_t buttons)
+{
+    uint16_t conn = ble_stack_conn_handle();
+    if (conn == 0xFFFF || !scroll_notifications_enabled)
+        return;
+
+    uint8_t report[5] = { 0x02, buttons, 0, 0, 0 };
+    uint16_t len = sizeof(report);
+    ble_gatts_hvx_params_t hvx = {
+        .handle = scroll_report_handles.value_handle,
+        .type = BLE_GATT_HVX_NOTIFICATION,
+        .offset = 0,
+        .p_len = &len,
+        .p_data = report,
+    };
+    sd_ble_gatts_hvx(conn, &hvx);
+}

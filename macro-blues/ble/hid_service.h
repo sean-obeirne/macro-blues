@@ -40,6 +40,9 @@ void hid_service_send_key(uint8_t keycode);
 /* Convenience: send an empty report (all keys released) */
 void hid_service_send_release(void);
 
+/* Send a mouse button report (Report ID 2, buttons only, no movement/scroll) */
+void hid_service_send_mouse_buttons(uint8_t buttons);
+
 /* Forward BLE GATTS write events to the HID service.
  * Called from ble_stack_process() for CCCD tracking. */
 void hid_service_on_write(uint16_t handle, const uint8_t *data, uint16_t len);
@@ -103,6 +106,19 @@ void hid_service_on_write(uint16_t handle, const uint8_t *data, uint16_t len);
 #define HID_KEY_F10   0x43
 #define HID_KEY_F11   0x44
 #define HID_KEY_F12   0x45
+
+#define HID_KEY_F13   0x68
+#define HID_KEY_F14   0x69
+#define HID_KEY_F15   0x6A
+#define HID_KEY_F16   0x6B
+#define HID_KEY_F17   0x6C
+#define HID_KEY_F18   0x6D
+#define HID_KEY_F19   0x6E
+#define HID_KEY_F20   0x6F
+#define HID_KEY_F21   0x70
+#define HID_KEY_F22   0x71
+#define HID_KEY_F23   0x72
+#define HID_KEY_F24   0x73
 
 /* Modifier bit masks (byte 0 of the report) */
 #define HID_MOD_LCTRL   0x01

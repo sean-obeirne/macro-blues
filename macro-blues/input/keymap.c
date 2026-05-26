@@ -14,16 +14,16 @@
 const uint8_t keymap[NUM_KEYS] = {
     /* top row */
     [0] = HID_KEY_NONE,
-    [3] = HID_KEY_NONE,
+    [3] = HID_KEY_F24,
     [6] = HID_KEY_NONE,
-    [9] = HID_KEY_NONE,
+    [9] = HID_KEY_ESCAPE,
     /* middle row */
     [1] = HID_KEY_F4,
     [4] = HID_KEY_F3,
     [7] = HID_KEY_F2,
     [10] = HID_KEY_F1,
     /* bottom row */
-    [2] = HID_KEY_NONE,
+    [2] = HID_KEY_SPACE,
     [5] = HID_KEY_NONE,
     [8] = HID_KEY_F6,
     [11] = HID_KEY_F5,
