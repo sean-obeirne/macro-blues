@@ -8,11 +8,15 @@
 #include "ble_gatts.h"
 #include "nrf_error.h"
 
+#include "nrf52832.h"
+
 #include "ble_stack.h"
 #include "hid_service.h"
 #include "battery.h"
 #include "bond.h"
 #include "led.h"
+#include "gpio.h"
+#include "board.h"
 
 /*
  * ble_stack.c — SoftDevice BLE initialization and event handling
@@ -313,6 +317,46 @@ void ble_stack_advertise(void)
         if (err != NRF_SUCCESS)
             error_blink(5, err);
     }
+}
+
+void ble_stack_system_off(void)
+{
+    /* Cleanly disconnect if a central is connected. */
+    if (conn_handle != BLE_CONN_HANDLE_INVALID)
+        sd_ble_gap_disconnect(conn_handle, 0x13); /* 0x13 = remote user terminated */
+
+    /* Visual feedback: LEDs off before sleeping. */
+    led_all_off();
+
+    /* Wait for the button to be released before arming sense-low.
+     * If we enter System OFF while the pin is still low, the sense
+     * condition is immediately true and the chip wakes right back up. */
+    while (gpio_pin_read(PIN_ENC_BTN) == 0)
+        ;
+
+    /* Disable the GPIOTE channel that was watching the encoder button
+     * (channel 2, HiToLo event mode set up by encoder_init).
+     * Leaving it active can re-trigger the LATCH via the event path. */
+    GPIOTE_CONFIG(2) = 0;
+    GPIOTE_INTENCLR = (1u << 2);
+
+    /* Clear any latched GPIO SENSE detect for the button pin.
+     * The LATCH bit is set on every edge while SENSE is armed;
+     * if it is still set when we call sd_power_system_off() the
+     * chip wakes immediately without waiting for the next press. */
+    GPIO_LATCH = (1u << PIN_ENC_BTN);
+
+    /* Arm the encoder button (active-low, pull-up) as the GPIO wakeup source.
+     * SENSE_Low fires when the pin is pulled low = button pressed. */
+    gpio_pin_cfg_sense_low(PIN_ENC_BTN);
+
+    /* Enter System OFF — ~0.3 µA draw.  The SoftDevice handles the
+     * orderly radio shutdown before the core powers down.
+     * A GPIO sense event (button press) causes a full chip reset. */
+    sd_power_system_off();
+
+    /* Never reached, but keeps the compiler happy. */
+    while (1) {}
 }
 
 void ble_stack_wait(void)

@@ -15,7 +15,15 @@ void gpio_pin_cfg_input(uint32_t pin)
 						| (0 << PIN_CNF_DRIVE) | (0 << PIN_CNF_SENSE);
 	GPIO_DIRCLR = (1 << pin);
 }
-
+void gpio_pin_cfg_sense_low(uint32_t pin)
+{
+	/* Input with pull-up, SENSE=Low (0x3 << 16): fires when pin goes low.
+	 * Used to arm a GPIO as a System OFF wakeup source. */
+	GPIO_PIN_CNF(pin) = (0 << PIN_CNF_DIR) | (0 << PIN_CNF_INPUT)
+					| (3 << PIN_CNF_PULL)
+					| (0 << PIN_CNF_DRIVE) | (3 << PIN_CNF_SENSE);
+	GPIO_DIRCLR = (1 << pin);
+}
 void gpio_pin_set(uint32_t pin)
 {
 	GPIO_OUTSET = (1 << pin);

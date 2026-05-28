@@ -200,11 +200,14 @@ int main(void)
 				hid_service_send_scroll((int8_t)(enc > 0 ? -1 : 1));
 		}
 
-		/* Encoder button — toggle between host-scroll and OLED-scroll modes */
+		/* Encoder button — enter System OFF deep sleep.
+		 * The chip resets (turns back on) when the button is pressed again. */
 		if (encoder_btn_fell())
 		{
-			display_mode = !display_mode;
-			display_toggle();
+			display_clear();
+			display_flush();   /* blank the framebuffer */
+			display_toggle();  /* send OLED display-off command */
+			ble_stack_system_off();
 		}
 
 		if (changed && ble_stack_connected())

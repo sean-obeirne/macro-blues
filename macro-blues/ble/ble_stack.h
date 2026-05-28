@@ -39,6 +39,12 @@ int ble_stack_connected(void);
 /* Restart advertising (e.g. after disconnect or manual stop). */
 void ble_stack_advertise(void);
 
+/* Enter nRF52 System OFF deep sleep (~0.3 µA).
+ * Disconnects BLE, turns off LEDs, arms the encoder button as a
+ * GPIO sense wakeup source, then calls sd_power_system_off().
+ * The chip resets on next button press — this function never returns. */
+void ble_stack_system_off(void);
+
 /* Sleep until the next event (BLE, GPIOTE, etc).
  * Wraps sd_app_evt_wait() so main.c doesn't need SDK headers. */
 void ble_stack_wait(void);

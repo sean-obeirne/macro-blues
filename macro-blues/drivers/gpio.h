@@ -13,6 +13,9 @@
 
 void gpio_pin_cfg_output(uint32_t pin);
 void gpio_pin_cfg_input(uint32_t pin);
+/* Configure pin as input with pull-up and sense-low wakeup.
+ * Used before entering System OFF to wake on button press. */
+void gpio_pin_cfg_sense_low(uint32_t pin);
 
 void gpio_pin_set(uint32_t pin);
 void gpio_pin_clear(uint32_t pin);
