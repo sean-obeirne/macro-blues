@@ -27,7 +27,7 @@
 
 /* Number of consecutive agreeing samples required to change state.
  * At a 10 ms scan rate, 5 cycles = 50 ms of debounce time. */
-#define DEBOUNCE_CYCLES 5
+#define DEBOUNCE_CYCLES 2
 
 void debounce_init(void);
 

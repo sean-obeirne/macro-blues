@@ -531,12 +531,6 @@ void hid_service_send_report(uint8_t modifier, const uint8_t *keys, uint8_t num_
     for (int i = 0; i < 6; i++)
         report[2 + i] = (i < num_keys) ? keys[i] : 0x00;
 
-    /* Fill in up to 6 keycodes */
-    for (int i = 0; i < 6; i++)
-    {
-        report[3 + i] = (i < num_keys) ? keys[i] : 0x00;
-    }
-
     uint16_t len = sizeof(report);
     ble_gatts_hvx_params_t hvx = {
         .handle = report_handles.value_handle,

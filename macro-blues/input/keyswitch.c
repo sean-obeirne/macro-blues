@@ -3,7 +3,10 @@
 #include "board.h"
 #include "keyswitch.h"
 
-const uint32_t row_pins[NUM_ROWS] = {PIN_ROW0, PIN_ROW1, PIN_ROW2, PIN_ROW3};
+/* Physical row order (top → bottom): RX, MISO, MOSI, SCK.
+ * board.h names them PIN_ROW0..3 by signal, but physically RX is the
+ * top row and SCK is the bottom row. */
+const uint32_t row_pins[NUM_ROWS] = {PIN_ROW3, PIN_ROW2, PIN_ROW1, PIN_ROW0};
 const uint32_t col_pins[NUM_COLS] = {PIN_COL0, PIN_COL1, PIN_COL2};
 
 void key_init(void)

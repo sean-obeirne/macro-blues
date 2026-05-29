@@ -120,6 +120,7 @@ int main(void)
 	int raw[NUM_KEYS];
 	int display_mode = 0; /* 0 = scroll host, 1 = scroll OLED */
 
+
 	/* Battery check counter.  Each main-loop idle sleep is
 	 * roughly 1 event period; we sample every ~3000 iterations
 	 * which works out to roughly every 30-60 seconds. */
@@ -212,7 +213,10 @@ int main(void)
 
 		if (changed && ble_stack_connected())
 		{
-			/* Build a report with all currently pressed keycodes */
+			/* Build a report with all currently pressed keycodes.
+			 * HID_MOD_HYPER (Ctrl+Alt+Cmd+Shift) is applied only when
+			 * at least one key is held — so a release sends mod=0 and
+			 * correctly un-sticks modifiers on the host. */
 			uint8_t keys[6] = {0};
 			uint8_t mod = 0;
 			uint8_t count = 0;
@@ -227,6 +231,8 @@ int main(void)
 					}
 				}
 			}
+			// if (count > 0)
+			// 	mod |= HID_MOD_HYPER;
 			hid_service_send_report(mod, keys, count);
 			led_toggle(LED_RED);
 		}
